@@ -190,6 +190,7 @@ function ItemsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-[60px]">S.No</TableHead>
                             <TableHead className="w-[120px]">Code</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Brand</TableHead>
@@ -198,8 +199,9 @@ function ItemsPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {items.map((item) => (
+                        {items.map((item, index) => (
                             <TableRow key={item.id}>
+                                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                 <TableCell className="font-medium">{item.code}</TableCell>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell>{getBrandName(item.brand_id)}</TableCell>
@@ -226,7 +228,7 @@ function ItemsPage() {
                         ))}
                         {items.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                     No items found.
                                 </TableCell>
                             </TableRow>

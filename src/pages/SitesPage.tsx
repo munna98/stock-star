@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Trash2, Pencil, X } from "lucide-react";
+import { Trash2, Pencil, X, PackagePlus, PackageMinus, Settings2 } from "lucide-react";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function SitesPage() {
     const [sites, setSites] = useState<Site[]>([]);
@@ -102,122 +108,165 @@ function SitesPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">Sites & Warehouses</h2>
-            </div>
+        <TooltipProvider>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-3xl font-bold tracking-tight">Sites & Warehouses</h2>
+                </div>
 
-            <Card>
-                <CardContent className="pt-6">
-                    <form onSubmit={handleSubmit} className="flex flex-row gap-4 items-end overflow-x-auto pb-2">
-                        <div className="flex-[1] min-w-[100px]">
-                            <Label htmlFor="code">Code</Label>
-                            <Input
-                                id="code"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                required
-                                placeholder="S001"
-                            />
-                        </div>
-                        <div className="flex-[2] min-w-[180px]">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                required
-                                placeholder="Main Warehouse"
-                            />
-                        </div>
-                        <div className="flex-[1.5] min-w-[130px]">
-                            <Label htmlFor="type">Type</Label>
-                            <Select
-                                value={formData.type}
-                                onValueChange={(value: "Site" | "Warehouse") =>
-                                    setFormData({ ...formData, type: value })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Site">Site</SelectItem>
-                                    <SelectItem value="Warehouse">Warehouse</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex-[3] min-w-[250px]">
-                            <Label htmlFor="address">Address</Label>
-                            <Input
-                                id="address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Full Address"
-                            />
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                            <Button type="submit">{editingId ? "Update Site" : "Add Site"}</Button>
-                            {editingId && (
-                                <Button type="button" variant="outline" onClick={handleCancel}>
-                                    <X className="h-4 w-4 mr-2" />
-                                    Cancel
-                                </Button>
-                            )}
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                <Card>
+                    <CardContent className="pt-6">
+                        <form onSubmit={handleSubmit} className="flex flex-row gap-4 items-end overflow-x-auto pb-2">
+                            <div className="flex-[1] min-w-[100px]">
+                                <Label htmlFor="code">Code</Label>
+                                <Input
+                                    id="code"
+                                    value={formData.code}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                    required
+                                    placeholder="S001"
+                                />
+                            </div>
+                            <div className="flex-[2] min-w-[180px]">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    required
+                                    placeholder="Main Warehouse"
+                                />
+                            </div>
+                            <div className="flex-[1.5] min-w-[130px]">
+                                <Label htmlFor="type">Type</Label>
+                                <Select
+                                    value={formData.type}
+                                    onValueChange={(value: "Site" | "Warehouse") =>
+                                        setFormData({ ...formData, type: value })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Site">Site</SelectItem>
+                                        <SelectItem value="Warehouse">Warehouse</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex-[3] min-w-[250px]">
+                                <Label htmlFor="address">Address</Label>
+                                <Input
+                                    id="address"
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    placeholder="Full Address"
+                                />
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                                <Button type="submit">{editingId ? "Update Site" : "Add Site"}</Button>
+                                {editingId && (
+                                    <Button type="button" variant="outline" onClick={handleCancel}>
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel
+                                    </Button>
+                                )}
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
 
-            <div className="rounded-md border bg-card">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[100px]">Code</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Address</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {sites.map((site) => (
-                            <TableRow key={site.id}>
-                                <TableCell className="font-medium">{site.code}</TableCell>
-                                <TableCell>{site.name}</TableCell>
-                                <TableCell>{site.type}</TableCell>
-                                <TableCell>{site.address}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleEdit(site)}
-                                        className="text-primary hover:text-primary hover:bg-primary/10"
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDelete(site.id!)}
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {sites.length === 0 && (
+                <div className="rounded-md border bg-card">
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                    No sites or warehouses found.
-                                </TableCell>
+                                <TableHead className="w-[60px]">S.No</TableHead>
+                                <TableHead className="w-[100px]">Code</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Address</TableHead>
+                                <TableHead className="w-[150px]">Stock Actions</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {sites.map((site, index) => (
+                                <TableRow key={site.id}>
+                                    <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                                    <TableCell className="font-medium">{site.code}</TableCell>
+                                    <TableCell>{site.name}</TableCell>
+                                    <TableCell>{site.type}</TableCell>
+                                    <TableCell>{site.address}</TableCell>
+                                    <TableCell className="space-x-1">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                >
+                                                    <PackagePlus className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Stock In</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                >
+                                                    <PackageMinus className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Stock Out</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                >
+                                                    <Settings2 className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Adjustment</TooltipContent>
+                                        </Tooltip>
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleEdit(site)}
+                                            className="text-primary hover:text-primary hover:bg-primary/10"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDelete(site.id!)}
+                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {sites.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                        No sites or warehouses found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
-        </div>
+        </TooltipProvider>
     );
 }
 

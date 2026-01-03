@@ -115,7 +115,7 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
             transaction_number TEXT NOT NULL UNIQUE,
             source_site_id INTEGER,
             destination_site_id INTEGER,
-            transaction_type TEXT NOT NULL,
+            transaction_type TEXT NOT NULL, --Purchase, Transfer, Delivery, Return, Damage, Missing, Excess
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             created_by INTEGER,
             updated_at DATETIME,

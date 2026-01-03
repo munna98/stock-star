@@ -106,15 +106,15 @@ function BrandsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[80px]">ID</TableHead>
+                            <TableHead className="w-[80px]">S.No</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {brands.map((brand) => (
+                        {brands.map((brand, index) => (
                             <TableRow key={brand.id}>
-                                <TableCell className="font-medium">{brand.id}</TableCell>
+                                <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell>{brand.name}</TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button

@@ -106,15 +106,15 @@ function ModelsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[80px]">ID</TableHead>
+                            <TableHead className="w-[80px]">S.No</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {models.map((model) => (
+                        {models.map((model, index) => (
                             <TableRow key={model.id}>
-                                <TableCell className="font-medium">{model.id}</TableCell>
+                                <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell>{model.name}</TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button
