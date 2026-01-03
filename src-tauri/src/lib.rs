@@ -32,7 +32,11 @@ pub fn run() {
             commands::create_site,
             commands::get_sites,
             commands::update_site,
-            commands::delete_site
+            commands::delete_site,
+            commands::get_inventory_transaction_types,
+            commands::create_inventory_voucher,
+            commands::get_inventory_vouchers,
+            commands::get_stock_balance
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

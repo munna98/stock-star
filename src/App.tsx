@@ -4,6 +4,7 @@ import ItemsPage from "./pages/ItemsPage";
 import SitesPage from "./pages/SitesPage";
 import BrandsPage from "./pages/BrandsPage";
 import ModelsPage from "./pages/ModelsPage";
+import StockEntryPage from "./pages/StockEntryPage";
 // import "./App.css";
 
 function Dashboard() {
@@ -17,16 +18,6 @@ function Dashboard() {
   );
 }
 
-function StockPage() {
-  return (
-    <div>
-      <div className="page-header">
-        <h2>Stock Ledger</h2>
-      </div>
-      <p style={{ color: "var(--text-secondary)" }}>Coming Soon...</p>
-    </div>
-  )
-}
 
 function App() {
   return (
@@ -38,7 +29,7 @@ function App() {
           <Route path="brands" element={<BrandsPage />} />
           <Route path="models" element={<ModelsPage />} />
           <Route path="sites" element={<SitesPage />} />
-          <Route path="stock" element={<StockPage />} />
+          <Route path="inventory-vouchers" element={<StockEntryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

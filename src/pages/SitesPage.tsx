@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createSite, deleteSite, getSites, updateSite, Site } from "../api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function SitesPage() {
         is_active: true,
     });
     const [editingId, setEditingId] = useState<number | null>(null);
+    const navigate = useNavigate();
 
     const fetchSites = async () => {
         try {
@@ -204,11 +206,12 @@ function SitesPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                    onClick={() => navigate(`/inventory-vouchers?type=Purchase Inward&destination=${site.id}`)}
                                                 >
                                                     <PackagePlus className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Stock In</TooltipContent>
+                                            <TooltipContent>Stock In (Purchase)</TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -216,11 +219,12 @@ function SitesPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                    onClick={() => navigate(`/inventory-vouchers?type=Material Usage&source=${site.id}`)}
                                                 >
                                                     <PackageMinus className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Stock Out</TooltipContent>
+                                            <TooltipContent>Stock Out (Usage)</TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -228,11 +232,12 @@ function SitesPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={() => navigate(`/inventory-vouchers?type=Stock Adjustment&destination=${site.id}`)}
                                                 >
                                                     <Settings2 className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Adjustment</TooltipContent>
+                                            <TooltipContent>Adjustment (In)</TooltipContent>
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">

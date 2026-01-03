@@ -1,4 +1,7 @@
-use crate::db::{self, Brand, Item, Model, Site};
+use crate::db::{
+    self, Brand, InventoryTransactionType, InventoryVoucher, InventoryVoucherDisplay, Item, Model,
+    Site,
+};
 use tauri::{command, AppHandle};
 
 // Item Commands
@@ -83,4 +86,28 @@ pub fn update_site(app: AppHandle, site: Site) -> Result<(), String> {
 #[command]
 pub fn delete_site(app: AppHandle, id: i64) -> Result<(), String> {
     db::delete_site(&app, id).map_err(|e| e.to_string())
+}
+
+// Inventory Transaction Type Commands
+#[command]
+pub fn get_inventory_transaction_types(
+    app: AppHandle,
+) -> Result<Vec<InventoryTransactionType>, String> {
+    db::get_all_inventory_transaction_types(&app).map_err(|e| e.to_string())
+}
+
+// Inventory Voucher Commands
+#[command]
+pub fn create_inventory_voucher(app: AppHandle, voucher: InventoryVoucher) -> Result<i64, String> {
+    db::create_inventory_voucher(&app, voucher).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_inventory_vouchers(app: AppHandle) -> Result<Vec<InventoryVoucherDisplay>, String> {
+    db::get_all_inventory_vouchers(&app).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_stock_balance(app: AppHandle, site_id: i64, item_id: i64) -> Result<f64, String> {
+    db::get_stock_balance(&app, site_id, item_id).map_err(|e| e.to_string())
 }

@@ -27,6 +27,43 @@ export interface Site {
     is_active: boolean;
 }
 
+export interface InventoryTransactionType {
+    id: number;
+    name: string;
+}
+
+export interface InventoryVoucher {
+    id?: number;
+    transaction_number: string;
+    voucher_date: string;
+    source_site_id?: number;
+    destination_site_id?: number;
+    voucher_type_id: number;
+    items: InventoryVoucherItem[];
+    created_at?: string;
+    created_by?: number;
+}
+
+export interface InventoryVoucherDisplay {
+    id: number;
+    transaction_number: string;
+    voucher_date: string;
+    source_site_id?: number;
+    source_site_name?: string;
+    destination_site_id?: number;
+    destination_site_name?: string;
+    voucher_type_id: number;
+    voucher_type_name: string;
+    created_at: string;
+}
+
+export interface InventoryVoucherItem {
+    id?: number;
+    inventory_voucher_id?: number;
+    item_id: number;
+    quantity: number;
+}
+
 // Item API
 export const createItem = async (item: Item): Promise<number> => {
     return await invoke("create_item", { item });
@@ -93,4 +130,22 @@ export const updateSite = async (site: Site): Promise<void> => {
 
 export const deleteSite = async (id: number): Promise<void> => {
     return await invoke("delete_site", { id });
+};
+
+// Inventory Transaction Type API
+export const getInventoryTransactionTypes = async (): Promise<InventoryTransactionType[]> => {
+    return await invoke("get_inventory_transaction_types");
+};
+
+// Inventory Voucher API
+export const createInventoryVoucher = async (voucher: InventoryVoucher): Promise<number> => {
+    return await invoke("create_inventory_voucher", { voucher });
+};
+
+export const getInventoryVouchers = async (): Promise<InventoryVoucherDisplay[]> => {
+    return await invoke("get_inventory_vouchers");
+};
+
+export const getStockBalance = async (siteId: number, itemId: number): Promise<number> => {
+    return await invoke("get_stock_balance", { siteId, itemId });
 };
