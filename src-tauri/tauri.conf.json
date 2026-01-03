@@ -5,7 +5,7 @@
   "identifier": "com.shadowsnaps.stock-star",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1421",
+    "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "stock-star",
-        "width": 800,
-        "height": 600
+        "width": 1200,
+        "height": 756
       }
     ],
     "security": {
