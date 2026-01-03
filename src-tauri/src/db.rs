@@ -74,16 +74,6 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
         [],
     )?;
 
-    // Reset items table to apply schema change
-    // conn.execute("DROP TABLE IF EXISTS items", [])?;
-    // Commented out automatic drop to avoid accidental data loss in future runs.
-    // For this migration, we assume the user accepts a fresh start or we conditionally schema check.
-    // Since the instruction was "Database Reset Recommended", we will force the new schema
-    // by creating if not exists with the NEW schema.
-    // However, if the table exists with OLD schema, this won't work.
-    // Let's explicitly drop it for this transition step.
-    conn.execute("DROP TABLE IF EXISTS items", [])?;
-
     conn.execute(
         "CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
