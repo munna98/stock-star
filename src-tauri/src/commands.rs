@@ -111,3 +111,36 @@ pub fn get_inventory_vouchers(app: AppHandle) -> Result<Vec<InventoryVoucherDisp
 pub fn get_stock_balance(app: AppHandle, site_id: i64, item_id: i64) -> Result<f64, String> {
     db::get_stock_balance(&app, site_id, item_id).map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn get_stock_balances(app: AppHandle) -> Result<Vec<db::StockBalance>, String> {
+    db::get_stock_balances(&app).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_item_stock_by_sites(
+    app: AppHandle,
+    item_id: i64,
+) -> Result<Vec<db::StockBalance>, String> {
+    db::get_item_stock_by_sites(&app, item_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_site_stock_balances(
+    app: AppHandle,
+    site_id: i64,
+) -> Result<Vec<db::StockBalance>, String> {
+    db::get_site_stock_balances(&app, site_id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_stock_movement_history(
+    app: AppHandle,
+    item_id: Option<i64>,
+    site_id: Option<i64>,
+    from_date: Option<String>,
+    to_date: Option<String>,
+) -> Result<Vec<db::StockMovementHistory>, String> {
+    db::get_stock_movement_history(&app, item_id, site_id, from_date, to_date)
+        .map_err(|e| e.to_string())
+}

@@ -12,6 +12,8 @@ function Layout() {
         { path: "/models", label: "Models" },
         { path: "/sites", label: "Sites" },
         { path: "/inventory-vouchers", label: "Transactions" },
+        { path: "/stock-balance", label: "Stock Balance" },
+        { path: "/stock-movements", label: "Stock History" },
     ];
 
     return (

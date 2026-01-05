@@ -5,6 +5,8 @@ import SitesPage from "./pages/SitesPage";
 import BrandsPage from "./pages/BrandsPage";
 import ModelsPage from "./pages/ModelsPage";
 import StockEntryPage from "./pages/StockEntryPage";
+import StockBalanceReport from "./pages/StockBalanceReport";
+import StockMovementReport from "./pages/StockMovementReport";
 // import "./App.css";
 
 function Dashboard() {
@@ -30,6 +32,8 @@ function App() {
           <Route path="models" element={<ModelsPage />} />
           <Route path="sites" element={<SitesPage />} />
           <Route path="inventory-vouchers" element={<StockEntryPage />} />
+          <Route path="stock-balance" element={<StockBalanceReport />} />
+          <Route path="stock-movements" element={<StockMovementReport />} />
         </Route>
       </Routes>
     </BrowserRouter>

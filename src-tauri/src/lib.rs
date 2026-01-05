@@ -36,7 +36,11 @@ pub fn run() {
             commands::get_inventory_transaction_types,
             commands::create_inventory_voucher,
             commands::get_inventory_vouchers,
-            commands::get_stock_balance
+            commands::get_stock_balance,
+            commands::get_stock_balances,
+            commands::get_item_stock_by_sites,
+            commands::get_site_stock_balances,
+            commands::get_stock_movement_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

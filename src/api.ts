@@ -64,6 +64,37 @@ export interface InventoryVoucherItem {
     quantity: number;
 }
 
+export interface StockBalance {
+    item_id: number;
+    item_code: string;
+    item_name: string;
+    brand_name?: string;
+    model_name?: string;
+    site_id: number;
+    site_code: string;
+    site_name: string;
+    site_type: string;
+    balance: number;
+}
+
+export interface StockMovementHistory {
+    id: number;
+    voucher_id: number;
+    transaction_number: string;
+    voucher_date: string;
+    voucher_type_name: string;
+    item_id: number;
+    item_code: string;
+    item_name: string;
+    site_id: number;
+    site_code: string;
+    site_name: string;
+    stock_in: number;
+    stock_out: number;
+    running_balance: number;
+    created_at: string;
+}
+
 // Item API
 export const createItem = async (item: Item): Promise<number> => {
     return await invoke("create_item", { item });
@@ -148,4 +179,30 @@ export const getInventoryVouchers = async (): Promise<InventoryVoucherDisplay[]>
 
 export const getStockBalance = async (siteId: number, itemId: number): Promise<number> => {
     return await invoke("get_stock_balance", { siteId, itemId });
+};
+
+export const getStockBalances = async (): Promise<StockBalance[]> => {
+    return await invoke("get_stock_balances");
+};
+
+export const getItemStockBySites = async (itemId: number): Promise<StockBalance[]> => {
+    return await invoke("get_item_stock_by_sites", { itemId });
+};
+
+export const getSiteStockBalances = async (siteId: number): Promise<StockBalance[]> => {
+    return await invoke("get_site_stock_balances", { siteId });
+};
+
+export const getStockMovementHistory = async (
+    itemId?: number,
+    siteId?: number,
+    fromDate?: string,
+    toDate?: string
+): Promise<StockMovementHistory[]> => {
+    return await invoke("get_stock_movement_history", {
+        itemId,
+        siteId,
+        fromDate,
+        toDate
+    });
 };

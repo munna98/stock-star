@@ -90,6 +90,39 @@ pub struct StockMovement {
     pub created_at: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StockBalance {
+    pub item_id: i64,
+    pub item_code: String,
+    pub item_name: String,
+    pub brand_name: Option<String>,
+    pub model_name: Option<String>,
+    pub site_id: i64,
+    pub site_code: String,
+    pub site_name: String,
+    pub site_type: String,
+    pub balance: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StockMovementHistory {
+    pub id: i64,
+    pub voucher_id: i64,
+    pub transaction_number: String,
+    pub voucher_date: String,
+    pub voucher_type_name: String,
+    pub item_id: i64,
+    pub item_code: String,
+    pub item_name: String,
+    pub site_id: i64,
+    pub site_code: String,
+    pub site_name: String,
+    pub stock_in: f64,
+    pub stock_out: f64,
+    pub running_balance: f64,
+    pub created_at: String,
+}
+
 // ============================================================================
 // Database Connection
 // ============================================================================
@@ -621,4 +654,261 @@ pub fn get_stock_balance(app: &AppHandle, site_id: i64, item_id: i64) -> Result<
         |row| row.get(0),
     )?;
     Ok(balance)
+}
+
+// Get all stock balances (grouped by item and site)
+pub fn get_stock_balances(app: &AppHandle) -> Result<Vec<StockBalance>> {
+    let conn = get_db_conn(app)?;
+    let mut stmt = conn.prepare(
+        "SELECT 
+            i.id as item_id,
+            i.code as item_code,
+            i.name as item_name,
+            b.name as brand_name,
+            m.name as model_name,
+            s.id as site_id,
+            s.code as site_code,
+            s.name as site_name,
+            s.type as site_type,
+            COALESCE(SUM(sm.stock_in) - SUM(sm.stock_out), 0) as balance
+         FROM items i
+         CROSS JOIN sites s
+         LEFT JOIN brands b ON i.brand_id = b.id
+         LEFT JOIN models m ON i.model_id = m.id
+         LEFT JOIN stock_movements sm ON sm.item_id = i.id AND sm.site_id = s.id
+         GROUP BY i.id, s.id
+         HAVING balance != 0
+         ORDER BY s.name, i.name",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(StockBalance {
+            item_id: row.get(0)?,
+            item_code: row.get(1)?,
+            item_name: row.get(2)?,
+            brand_name: row.get(3)?,
+            model_name: row.get(4)?,
+            site_id: row.get(5)?,
+            site_code: row.get(6)?,
+            site_name: row.get(7)?,
+            site_type: row.get(8)?,
+            balance: row.get(9)?,
+        })
+    })?;
+
+    rows.collect()
+}
+
+// Get stock balance for specific item across all sites
+pub fn get_item_stock_by_sites(app: &AppHandle, item_id: i64) -> Result<Vec<StockBalance>> {
+    let conn = get_db_conn(app)?;
+    let mut stmt = conn.prepare(
+        "SELECT 
+            i.id as item_id,
+            i.code as item_code,
+            i.name as item_name,
+            b.name as brand_name,
+            m.name as model_name,
+            s.id as site_id,
+            s.code as site_code,
+            s.name as site_name,
+            s.type as site_type,
+            COALESCE(SUM(sm.stock_in) - SUM(sm.stock_out), 0) as balance
+         FROM items i
+         CROSS JOIN sites s
+         LEFT JOIN brands b ON i.brand_id = b.id
+         LEFT JOIN models m ON i.model_id = m.id
+         LEFT JOIN stock_movements sm ON sm.item_id = i.id AND sm.site_id = s.id
+         WHERE i.id = ?1
+         GROUP BY s.id
+         ORDER BY s.name",
+    )?;
+
+    let rows = stmt.query_map(params![item_id], |row| {
+        Ok(StockBalance {
+            item_id: row.get(0)?,
+            item_code: row.get(1)?,
+            item_name: row.get(2)?,
+            brand_name: row.get(3)?,
+            model_name: row.get(4)?,
+            site_id: row.get(5)?,
+            site_code: row.get(6)?,
+            site_name: row.get(7)?,
+            site_type: row.get(8)?,
+            balance: row.get(9)?,
+        })
+    })?;
+
+    rows.collect()
+}
+
+// Get stock balance for specific site
+pub fn get_site_stock_balances(app: &AppHandle, site_id: i64) -> Result<Vec<StockBalance>> {
+    let conn = get_db_conn(app)?;
+    let mut stmt = conn.prepare(
+        "SELECT 
+            i.id as item_id,
+            i.code as item_code,
+            i.name as item_name,
+            b.name as brand_name,
+            m.name as model_name,
+            s.id as site_id,
+            s.code as site_code,
+            s.name as site_name,
+            s.type as site_type,
+            COALESCE(SUM(sm.stock_in) - SUM(sm.stock_out), 0) as balance
+         FROM items i
+         CROSS JOIN sites s
+         LEFT JOIN brands b ON i.brand_id = b.id
+         LEFT JOIN models m ON i.model_id = m.id
+         LEFT JOIN stock_movements sm ON sm.item_id = i.id AND sm.site_id = s.id
+         WHERE s.id = ?1
+         GROUP BY i.id
+         HAVING balance != 0
+         ORDER BY i.name",
+    )?;
+
+    let rows = stmt.query_map(params![site_id], |row| {
+        Ok(StockBalance {
+            item_id: row.get(0)?,
+            item_code: row.get(1)?,
+            item_name: row.get(2)?,
+            brand_name: row.get(3)?,
+            model_name: row.get(4)?,
+            site_id: row.get(5)?,
+            site_code: row.get(6)?,
+            site_name: row.get(7)?,
+            site_type: row.get(8)?,
+            balance: row.get(9)?,
+        })
+    })?;
+
+    rows.collect()
+}
+
+// ============================================================================
+// Stock Movement History Operations
+// ============================================================================
+
+pub fn get_stock_movement_history(
+    app: &AppHandle,
+    item_id: Option<i64>,
+    site_id: Option<i64>,
+    from_date: Option<String>,
+    to_date: Option<String>,
+) -> Result<Vec<StockMovementHistory>> {
+    let conn = get_db_conn(app)?;
+
+    // 1. Calculate Opening Balance (if item is selected and from_date is present)
+    let mut opening_balance = 0.0;
+    if let (Some(iid), Some(fd)) = (item_id, &from_date) {
+        let mut balance_query = String::from(
+            "SELECT COALESCE(SUM(sm.stock_in) - SUM(sm.stock_out), 0)
+             FROM stock_movements sm
+             JOIN inventory_vouchers v ON sm.voucher_id = v.id
+             WHERE sm.item_id = ? AND v.voucher_date < ?",
+        );
+        let mut balance_params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(iid), Box::new(fd)];
+
+        if let Some(sid) = site_id {
+            balance_query.push_str(" AND sm.site_id = ?");
+            balance_params.push(Box::new(sid));
+        }
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> =
+            balance_params.iter().map(|p| p.as_ref()).collect();
+        opening_balance = conn
+            .query_row(&balance_query, &param_refs[..], |row| row.get(0))
+            .unwrap_or(0.0);
+    }
+
+    // 2. Fetch Movements
+    let mut query = String::from(
+        "SELECT 
+            sm.id,
+            sm.voucher_id,
+            v.transaction_number,
+            v.voucher_date,
+            t.name as voucher_type_name,
+            sm.item_id,
+            i.code as item_code,
+            i.name as item_name,
+            sm.site_id,
+            s.code as site_code,
+            s.name as site_name,
+            sm.stock_in,
+            sm.stock_out,
+            sm.created_at
+         FROM stock_movements sm
+         JOIN inventory_vouchers v ON sm.voucher_id = v.id
+         JOIN inventory_transaction_types t ON v.voucher_type_id = t.id
+         JOIN items i ON sm.item_id = i.id
+         JOIN sites s ON sm.site_id = s.id
+         WHERE 1=1",
+    );
+
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+    if let Some(iid) = item_id {
+        query.push_str(" AND sm.item_id = ?");
+        params.push(Box::new(iid));
+    }
+
+    if let Some(sid) = site_id {
+        query.push_str(" AND sm.site_id = ?");
+        params.push(Box::new(sid));
+    }
+
+    if let Some(fd) = &from_date {
+        query.push_str(" AND v.voucher_date >= ?");
+        params.push(Box::new(fd));
+    }
+
+    if let Some(td) = to_date {
+        query.push_str(" AND v.voucher_date <= ?");
+        params.push(Box::new(td));
+    }
+
+    query.push_str(" ORDER BY v.voucher_date ASC, sm.created_at ASC");
+
+    let mut stmt = conn.prepare(&query)?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+    let mut movements: Vec<StockMovementHistory> = stmt
+        .query_map(&param_refs[..], |row| {
+            Ok(StockMovementHistory {
+                id: row.get(0)?,
+                voucher_id: row.get(1)?,
+                transaction_number: row.get(2)?,
+                voucher_date: row.get(3)?,
+                voucher_type_name: row.get(4)?,
+                item_id: row.get(5)?,
+                item_code: row.get(6)?,
+                item_name: row.get(7)?,
+                site_id: row.get(8)?,
+                site_code: row.get(9)?,
+                site_name: row.get(10)?,
+                stock_in: row.get(11)?,
+                stock_out: row.get(12)?,
+                running_balance: 0.0, // Will calculate below
+                created_at: row.get(13)?,
+            })
+        })?
+        .collect::<Result<Vec<_>>>()?;
+
+    // 3. Calculate Running Balance (Only if Item is selected)
+    if item_id.is_some() {
+        let mut current_balance = opening_balance;
+        for movement in &mut movements {
+            current_balance += movement.stock_in - movement.stock_out;
+            movement.running_balance = current_balance;
+        }
+    } else {
+        // If multiple items, running balance is meaningless
+        for movement in &mut movements {
+            movement.running_balance = 0.0;
+        }
+    }
+
+    Ok(movements)
 }
