@@ -2,6 +2,10 @@ use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+// ============================================================================
+// Data Models
+// ============================================================================
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Brand {
     pub id: Option<i64>,
@@ -42,7 +46,7 @@ pub struct InventoryTransactionType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InventoryVoucher {
     pub id: Option<i64>,
-    pub transaction_number: String,
+    pub transaction_number: Option<String>,
     pub voucher_date: String,
     pub source_site_id: Option<i64>,
     pub destination_site_id: Option<i64>,
@@ -86,6 +90,10 @@ pub struct StockMovement {
     pub created_at: Option<String>,
 }
 
+// ============================================================================
+// Database Connection
+// ============================================================================
+
 fn get_db_conn(app: &AppHandle) -> Result<Connection> {
     let app_data_dir = app
         .path()
@@ -95,22 +103,36 @@ fn get_db_conn(app: &AppHandle) -> Result<Connection> {
     Connection::open(db_path)
 }
 
+// ============================================================================
+// Database Initialization
+// ============================================================================
+
 pub fn init_db(app: &AppHandle) -> Result<()> {
-    // We will store the database in the app data directory
     let app_data_dir = app
         .path()
         .app_data_dir()
         .expect("failed to get app data dir");
+
     if !app_data_dir.exists() {
         std::fs::create_dir_all(&app_data_dir).expect("failed to create app data dir");
     }
-    let db_path = app_data_dir.join("stock-star.db");
 
+    let db_path = app_data_dir.join("stock-star.db");
     let conn = Connection::open(db_path)?;
 
     // Enable foreign keys
     conn.execute("PRAGMA foreign_keys = ON;", [])?;
 
+    // Create tables
+    create_tables(&conn)?;
+
+    // Seed initial data
+    seed_transaction_types(&conn)?;
+
+    Ok(())
+}
+
+fn create_tables(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS brands (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,129 +192,6 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
         [],
     )?;
 
-    // Seed transaction types if empty
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM inventory_transaction_types",
-        [],
-        |row| row.get(0),
-    )?;
-
-    if count == 0 {
-        let types = vec![
-            "Purchase Inward",
-            "Godown → Site",
-            "Site → Godown",
-            "Site → Site",
-            "Material Usage",
-            "Stock Adjustment",
-            "Damaged Stock",
-        ];
-        for t in types {
-            conn.execute(
-                "INSERT INTO inventory_transaction_types (name) VALUES (?1)",
-                params![t],
-            )?;
-        }
-    }
-
-    // Check for legacy column 'transaction_type' in 'inventory_vouchers'
-    let has_transaction_type = {
-        let mut stmt = conn.prepare("SELECT name FROM pragma_table_info('inventory_vouchers')")?;
-        let columns = stmt.query_map([], |row| row.get::<_, String>(0))?;
-        let mut found = false;
-        for col in columns {
-            if let Ok(name) = col {
-                if name.to_lowercase() == "transaction_type" {
-                    found = true;
-                    break;
-                }
-            }
-        }
-        found
-    };
-
-    if has_transaction_type {
-        println!(">>> [INIT] Legacy column 'transaction_type' detected in 'inventory_vouchers'.");
-        println!(">>> [INIT] Starting database migration to modernize schema...");
-
-        // Ensure no previous failed migration tables exist
-        let _ = conn.execute("DROP TABLE IF EXISTS old_inventory_vouchers", []);
-
-        // 1. Rename old table
-        conn.execute(
-            "ALTER TABLE inventory_vouchers RENAME TO old_inventory_vouchers",
-            [],
-        )?;
-
-        // 2. Create new table with modern schema
-        conn.execute(
-            "CREATE TABLE inventory_vouchers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                transaction_number TEXT NOT NULL UNIQUE,
-                voucher_date TEXT,
-                source_site_id INTEGER,
-                destination_site_id INTEGER,
-                voucher_type_id INTEGER,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                created_by INTEGER,
-                updated_at DATETIME,
-                updated_by INTEGER,
-                FOREIGN KEY(source_site_id) REFERENCES sites(id),
-                FOREIGN KEY(destination_site_id) REFERENCES sites(id),
-                FOREIGN KEY(voucher_type_id) REFERENCES inventory_transaction_types(id)
-            )",
-            [],
-        )?;
-
-        // 3. Migrate data
-        println!(">>> [INIT] Moving data to new schema...");
-
-        // Add voucher_type_id to old table if missing for easier mapping
-        let old_has_voucher_type_id = {
-            let mut stmt =
-                conn.prepare("SELECT name FROM pragma_table_info('old_inventory_vouchers')")?;
-            let mut cols = stmt.query_map([], |row| row.get::<_, String>(0))?;
-            cols.any(|c| {
-                c.map(|n| n.to_lowercase() == "voucher_type_id")
-                    .unwrap_or(false)
-            })
-        };
-
-        if !old_has_voucher_type_id {
-            let _ = conn.execute(
-                "ALTER TABLE old_inventory_vouchers ADD COLUMN voucher_type_id INTEGER",
-                [],
-            );
-        }
-
-        // Map strings to IDs
-        let types_mapping = vec![
-            ("Purchase Inward", "Purchase"),
-            ("Godown → Site", "Transfer"),
-            ("Material Usage", "Usage"),
-            ("Stock Adjustment", "Adjustment"),
-        ];
-
-        for (new_name, old_name) in types_mapping {
-            let _ = conn.execute(
-                "UPDATE old_inventory_vouchers SET voucher_type_id = (SELECT id FROM inventory_transaction_types WHERE name = ?1) WHERE transaction_type = ?2",
-                params![new_name, old_name],
-            );
-        }
-
-        // Copy everything
-        conn.execute(
-            "INSERT INTO inventory_vouchers (id, transaction_number, voucher_date, source_site_id, destination_site_id, voucher_type_id, created_at, created_by)
-             SELECT id, transaction_number, COALESCE(voucher_date, date('now')), source_site_id, destination_site_id, voucher_type_id, created_at, created_by
-             FROM old_inventory_vouchers",
-            [],
-        )?;
-
-        // 4. Cleanup
-        conn.execute("DROP TABLE old_inventory_vouchers", [])?;
-        println!(">>> [INIT] Migration successful. Legacy column removed.");
-    }
-
     conn.execute(
         "CREATE TABLE IF NOT EXISTS inventory_vouchers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -346,7 +245,32 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
     Ok(())
 }
 
+fn seed_transaction_types(conn: &Connection) -> Result<()> {
+    let types = [
+        "Purchase Inward",
+        "Opening Stock",
+        "Godown → Site",
+        "Site → Godown",
+        "Site → Site",
+        "Material Usage",
+        "Stock Adjustment",
+        "Damaged Stock",
+    ];
+    for t in types {
+        // Use INSERT OR IGNORE to be safe, ensuring missing types are added
+        conn.execute(
+            "INSERT OR IGNORE INTO inventory_transaction_types (name) VALUES (?1)",
+            params![t],
+        )?;
+    }
+
+    Ok(())
+}
+
+// ============================================================================
 // Brand Operations
+// ============================================================================
+
 pub fn create_brand(app: &AppHandle, brand: Brand) -> Result<i64> {
     let conn = get_db_conn(app)?;
     conn.execute("INSERT INTO brands (name) VALUES (?1)", params![brand.name])?;
@@ -362,11 +286,7 @@ pub fn get_all_brands(app: &AppHandle) -> Result<Vec<Brand>> {
             name: row.get(1)?,
         })
     })?;
-    let mut brands = Vec::new();
-    for r in rows {
-        brands.push(r?);
-    }
-    Ok(brands)
+    rows.collect()
 }
 
 pub fn update_brand(app: &AppHandle, brand: Brand) -> Result<()> {
@@ -384,7 +304,10 @@ pub fn delete_brand(app: &AppHandle, id: i64) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
 // Model Operations
+// ============================================================================
+
 pub fn create_model(app: &AppHandle, model: Model) -> Result<i64> {
     let conn = get_db_conn(app)?;
     conn.execute("INSERT INTO models (name) VALUES (?1)", params![model.name])?;
@@ -400,11 +323,7 @@ pub fn get_all_models(app: &AppHandle) -> Result<Vec<Model>> {
             name: row.get(1)?,
         })
     })?;
-    let mut models = Vec::new();
-    for r in rows {
-        models.push(r?);
-    }
-    Ok(models)
+    rows.collect()
 }
 
 pub fn update_model(app: &AppHandle, model: Model) -> Result<()> {
@@ -422,7 +341,10 @@ pub fn delete_model(app: &AppHandle, id: i64) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
 // Item Operations
+// ============================================================================
+
 pub fn create_item(app: &AppHandle, item: Item) -> Result<i64> {
     let conn = get_db_conn(app)?;
     conn.execute(
@@ -435,7 +357,7 @@ pub fn create_item(app: &AppHandle, item: Item) -> Result<i64> {
 pub fn get_all_items(app: &AppHandle) -> Result<Vec<Item>> {
     let conn = get_db_conn(app)?;
     let mut stmt = conn.prepare("SELECT id, code, name, brand_id, model_id FROM items")?;
-    let item_iter = stmt.query_map([], |row| {
+    let rows = stmt.query_map([], |row| {
         Ok(Item {
             id: Some(row.get(0)?),
             code: row.get(1)?,
@@ -444,12 +366,7 @@ pub fn get_all_items(app: &AppHandle) -> Result<Vec<Item>> {
             model_id: row.get(4)?,
         })
     })?;
-
-    let mut items = Vec::new();
-    for item in item_iter {
-        items.push(item?);
-    }
-    Ok(items)
+    rows.collect()
 }
 
 pub fn update_item(app: &AppHandle, item: Item) -> Result<()> {
@@ -467,7 +384,10 @@ pub fn delete_item(app: &AppHandle, id: i64) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
 // Site Operations
+// ============================================================================
+
 pub fn create_site(app: &AppHandle, site: Site) -> Result<i64> {
     let conn = get_db_conn(app)?;
     conn.execute(
@@ -486,7 +406,7 @@ pub fn create_site(app: &AppHandle, site: Site) -> Result<i64> {
 pub fn get_all_sites(app: &AppHandle) -> Result<Vec<Site>> {
     let conn = get_db_conn(app)?;
     let mut stmt = conn.prepare("SELECT id, code, name, address, type, is_active FROM sites")?;
-    let site_iter = stmt.query_map([], |row| {
+    let rows = stmt.query_map([], |row| {
         Ok(Site {
             id: Some(row.get(0)?),
             code: row.get(1)?,
@@ -496,12 +416,7 @@ pub fn get_all_sites(app: &AppHandle) -> Result<Vec<Site>> {
             is_active: row.get(5)?,
         })
     })?;
-
-    let mut sites = Vec::new();
-    for site in site_iter {
-        sites.push(site?);
-    }
-    Ok(sites)
+    rows.collect()
 }
 
 pub fn update_site(app: &AppHandle, site: Site) -> Result<()> {
@@ -519,7 +434,10 @@ pub fn delete_site(app: &AppHandle, id: i64) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
 // Inventory Transaction Type Operations
+// ============================================================================
+
 pub fn get_all_inventory_transaction_types(
     app: &AppHandle,
 ) -> Result<Vec<InventoryTransactionType>> {
@@ -531,24 +449,31 @@ pub fn get_all_inventory_transaction_types(
             name: row.get(1)?,
         })
     })?;
-    let mut types = Vec::new();
-    for r in rows {
-        types.push(r?);
-    }
-    Ok(types)
+    rows.collect()
 }
 
+// ============================================================================
 // Inventory Voucher Operations
+// ============================================================================
+
 pub fn create_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) -> Result<i64> {
     let mut conn = get_db_conn(app)?;
     let tx = conn.transaction()?;
 
-    // 1. Insert Voucher
+    // Generate sequential transaction number
+    let next_number: i64 = tx.query_row(
+        "SELECT COALESCE(MAX(CAST(transaction_number AS INTEGER)), 0) + 1 FROM inventory_vouchers",
+        [],
+        |row| row.get(0),
+    )?;
+    let transaction_number = next_number.to_string();
+
+    // Insert Voucher
     tx.execute(
         "INSERT INTO inventory_vouchers (transaction_number, voucher_date, source_site_id, destination_site_id, voucher_type_id, created_by) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
-            voucher.transaction_number,
+            transaction_number,
             voucher.voucher_date,
             voucher.source_site_id,
             voucher.destination_site_id,
@@ -559,14 +484,14 @@ pub fn create_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) 
     let voucher_id = tx.last_insert_rowid();
     voucher.id = Some(voucher_id);
 
-    // Get the name of the transaction type to decide movement logic
+    // Get transaction type name for movement logic
     let type_name: String = tx.query_row(
         "SELECT name FROM inventory_transaction_types WHERE id = ?1",
         params![voucher.voucher_type_id],
         |row| row.get(0),
     )?;
 
-    // 2. Insert Items and Movements
+    // Insert Items and create Stock Movements
     for item in &voucher.items {
         tx.execute(
             "INSERT INTO inventory_voucher_items (inventory_voucher_id, item_id, quantity) VALUES (?1, ?2, ?3)",
@@ -574,61 +499,75 @@ pub fn create_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) 
         )?;
         let voucher_item_id = tx.last_insert_rowid();
 
-        // Movement Logic
-        match type_name.as_str() {
-            "Purchase Inward" => {
-                if let Some(dest_id) = voucher.destination_site_id {
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
-                    )?;
-                }
-            }
-            "Godown → Site" | "Site → Godown" | "Site → Site" => {
-                if let Some(src_id) = voucher.source_site_id {
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
-                    )?;
-                }
-                if let Some(dest_id) = voucher.destination_site_id {
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
-                    )?;
-                }
-            }
-            "Material Usage" | "Damaged Stock" => {
-                if let Some(src_id) = voucher.source_site_id {
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
-                    )?;
-                }
-            }
-            "Stock Adjustment" => {
-                // If destination is set, it's an In adjustment
-                if let Some(dest_id) = voucher.destination_site_id {
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
-                    )?;
-                } else if let Some(src_id) = voucher.source_site_id {
-                    // If only source is set, it's an Out adjustment
-                    tx.execute(
-                        "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
-                        params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
-                    )?;
-                }
-            }
-            _ => {
-                // Default fallback if unknown type
-            }
-        }
+        // Create stock movements based on transaction type
+        create_stock_movements(&tx, &type_name, &voucher, voucher_item_id, item)?;
     }
 
     tx.commit()?;
     Ok(voucher_id)
+}
+
+fn create_stock_movements(
+    tx: &rusqlite::Transaction,
+    type_name: &str,
+    voucher: &InventoryVoucher,
+    voucher_item_id: i64,
+    item: &InventoryVoucherItem,
+) -> Result<()> {
+    let voucher_id = voucher.id.unwrap();
+
+    match type_name {
+        "Purchase Inward" | "Opening Stock" => {
+            if let Some(dest_id) = voucher.destination_site_id {
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
+                )?;
+            }
+        }
+        "Godown → Site" | "Site → Godown" | "Site → Site" => {
+            // Stock out from source
+            if let Some(src_id) = voucher.source_site_id {
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
+                )?;
+            }
+            // Stock in to destination
+            if let Some(dest_id) = voucher.destination_site_id {
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
+                )?;
+            }
+        }
+        "Material Usage" | "Damaged Stock" => {
+            if let Some(src_id) = voucher.source_site_id {
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
+                )?;
+            }
+        }
+        "Stock Adjustment" => {
+            // If destination is set, it's an In adjustment
+            if let Some(dest_id) = voucher.destination_site_id {
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_in) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, dest_id, item.quantity],
+                )?;
+            } else if let Some(src_id) = voucher.source_site_id {
+                // If only source is set, it's an Out adjustment
+                tx.execute(
+                    "INSERT INTO stock_movements (voucher_id, voucher_item_id, item_id, site_id, stock_out) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![voucher_id, voucher_item_id, item.item_id, src_id, item.quantity],
+                )?;
+            }
+        }
+        _ => {} // Unknown type - no movement
+    }
+
+    Ok(())
 }
 
 pub fn get_all_inventory_vouchers(app: &AppHandle) -> Result<Vec<InventoryVoucherDisplay>> {
@@ -667,12 +606,12 @@ pub fn get_all_inventory_vouchers(app: &AppHandle) -> Result<Vec<InventoryVouche
         })
     })?;
 
-    let mut vouchers = Vec::new();
-    for r in rows {
-        vouchers.push(r?);
-    }
-    Ok(vouchers)
+    rows.collect()
 }
+
+// ============================================================================
+// Stock Balance Operations
+// ============================================================================
 
 pub fn get_stock_balance(app: &AppHandle, site_id: i64, item_id: i64) -> Result<f64> {
     let conn = get_db_conn(app)?;

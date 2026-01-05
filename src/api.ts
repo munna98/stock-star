@@ -34,7 +34,7 @@ export interface InventoryTransactionType {
 
 export interface InventoryVoucher {
     id?: number;
-    transaction_number: string;
+    transaction_number?: string;
     voucher_date: string;
     source_site_id?: number;
     destination_site_id?: number;

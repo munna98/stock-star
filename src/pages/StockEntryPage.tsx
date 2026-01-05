@@ -33,7 +33,6 @@ function StockEntryPage() {
     const [searchParams] = useSearchParams();
 
     const [voucher, setVoucher] = useState<Partial<InventoryVoucher>>({
-        transaction_number: `VOU-${Date.now()}`,
         voucher_date: new Date().toISOString().split('T')[0],
         voucher_type_id: 0,
         source_site_id: undefined,
@@ -78,8 +77,42 @@ function StockEntryPage() {
 
     const selectedType = transactionTypes.find(t => t.id === voucher.voucher_type_id);
 
-    const showSource = selectedType && !["Purchase Inward"].includes(selectedType.name);
+    const showSource = selectedType && !["Purchase Inward", "Opening Stock"].includes(selectedType.name);
     const showDestination = selectedType && !["Material Usage", "Damaged Stock"].includes(selectedType.name);
+
+    // Filter sites based on transaction type
+    const getSourceSites = () => {
+        if (!selectedType) return sites;
+        
+        switch (selectedType.name) {
+            case "Godown → Site":
+                return sites.filter(s => s.type === "Warehouse");
+            case "Site → Godown":
+                return sites.filter(s => s.type === "Site");
+            case "Site → Site":
+                return sites.filter(s => s.type === "Site");
+            default:
+                return sites;
+        }
+    };
+
+    const getDestinationSites = () => {
+        if (!selectedType) return sites;
+        
+        switch (selectedType.name) {
+            case "Godown → Site":
+                return sites.filter(s => s.type === "Site");
+            case "Site → Godown":
+                return sites.filter(s => s.type === "Warehouse");
+            case "Site → Site":
+                return sites.filter(s => s.type === "Site");
+            default:
+                return sites;
+        }
+    };
+
+    const filteredSourceSites = getSourceSites();
+    const filteredDestinationSites = getDestinationSites();
 
     const addItemRow = () => {
         setVoucher(prev => ({
@@ -130,7 +163,6 @@ function StockEntryPage() {
             } as InventoryVoucher);
             alert("Voucher saved successfully!");
             setVoucher({
-                transaction_number: `VOU-${Date.now()}`,
                 voucher_date: new Date().toISOString().split('T')[0],
                 voucher_type_id: transactionTypes[0]?.id,
                 source_site_id: undefined,
@@ -146,7 +178,6 @@ function StockEntryPage() {
     const handleClear = () => {
         if (confirm("Are you sure you want to clear this entry?")) {
             setVoucher({
-                transaction_number: `VOU-${Date.now()}`,
                 voucher_date: new Date().toISOString().split('T')[0],
                 voucher_type_id: transactionTypes[0]?.id,
                 source_site_id: undefined,
@@ -172,60 +203,57 @@ function StockEntryPage() {
                 </div>
 
                 <Card className="border-2">
-                    <CardContent className="flex flex-row gap-4 items-end overflow-x-auto pt-4 pb-4">
-                        <div className="flex-[1] min-w-[130px]">
+                    <CardContent className="flex flex-row gap-4 items-end pt-4 pb-4">
+                        <div className="flex-1 min-w-[130px]">
                             <Label>Date</Label>
                             <Input
                                 type="date"
                                 value={voucher.voucher_date}
                                 onChange={(e) => setVoucher({ ...voucher, voucher_date: e.target.value })}
-                                className="h-8"
+                                className="h-8 w-full"
                             />
                         </div>
-                        <div className="flex-[1] min-w-[150px]">
-                            <Label>Transaction Number</Label>
-                            <Input
-                                value={voucher.transaction_number}
-                                onChange={(e) => setVoucher({ ...voucher, transaction_number: e.target.value })}
-                                className="h-8"
-                            />
-                        </div>
-                        <div className="flex-[1.5] min-w-[180px]">
+
+                        <div className="flex-1 min-w-[180px]">
                             <Label>Transaction Type</Label>
                             <Combobox
                                 options={transactionTypes.map(t => ({ label: t.name, value: String(t.id) }))}
                                 value={voucher.voucher_type_id ? String(voucher.voucher_type_id) : ""}
                                 onChange={(val) => setVoucher({ ...voucher, voucher_type_id: Number(val) })}
                                 placeholder="Select type"
-                                className="h-8"
+                                className="h-8 w-full"
                             />
                         </div>
 
-                        {showSource && (
-                            <div className="flex-[1.5] min-w-[180px]">
-                                <Label>Source (From)</Label>
+                        <div className="flex-1 min-w-[180px]">
+                            <Label>Source (From)</Label>
+                            {showSource ? (
                                 <Combobox
-                                    options={sites.map(s => ({ label: `${s.name} (${s.type})`, value: String(s.id) }))}
+                                    options={filteredSourceSites.map(s => ({ label: `${s.name} (${s.type})`, value: String(s.id) }))}
                                     value={voucher.source_site_id ? String(voucher.source_site_id) : ""}
                                     onChange={(val) => setVoucher({ ...voucher, source_site_id: Number(val) })}
                                     placeholder="Select Source Site"
-                                    className="h-8"
+                                    className="h-8 w-full"
                                 />
-                            </div>
-                        )}
+                            ) : (
+                                <div className="h-8 bg-muted rounded w-full" />
+                            )}
+                        </div>
 
-                        {showDestination && (
-                            <div className="flex-[1.5] min-w-[180px]">
-                                <Label>Destination (To)</Label>
+                        <div className="flex-1 min-w-[180px]">
+                            <Label>Destination (To)</Label>
+                            {showDestination ? (
                                 <Combobox
-                                    options={sites.map(s => ({ label: `${s.name} (${s.type})`, value: String(s.id) }))}
+                                    options={filteredDestinationSites.map(s => ({ label: `${s.name} (${s.type})`, value: String(s.id) }))}
                                     value={voucher.destination_site_id ? String(voucher.destination_site_id) : ""}
                                     onChange={(val) => setVoucher({ ...voucher, destination_site_id: Number(val) })}
                                     placeholder="Select Destination Site"
-                                    className="h-8"
+                                    className="h-8 w-full"
                                 />
-                            </div>
-                        )}
+                            ) : (
+                                <div className="h-8 bg-muted rounded w-full" />
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 
