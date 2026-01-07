@@ -21,8 +21,8 @@ function StockMovementReport() {
     const [sites, setSites] = useState<Site[]>([]);
 
     const [filters, setFilters] = useState({
-        itemId: undefined as number | undefined,
-        siteId: undefined as number | undefined,
+        itemId: "all" as number | "all",
+        siteId: "all" as number | "all",
         fromDate: "",
         toDate: "",
     });
@@ -51,8 +51,8 @@ function StockMovementReport() {
     const handleSearch = async () => {
         try {
             const data = await getStockMovementHistory(
-                filters.itemId,
-                filters.siteId,
+                filters.itemId === "all" ? undefined : filters.itemId,
+                filters.siteId === "all" ? undefined : filters.siteId,
                 filters.fromDate || undefined,
                 filters.toDate || undefined
             );
@@ -64,8 +64,8 @@ function StockMovementReport() {
 
     const handleClear = () => {
         setFilters({
-            itemId: undefined,
-            siteId: undefined,
+            itemId: "all",
+            siteId: "all",
             fromDate: "",
             toDate: "",
         });
@@ -84,24 +84,30 @@ function StockMovementReport() {
                         <div className="space-y-2">
                             <Label>Item</Label>
                             <Combobox
-                                options={items.map(i => ({
-                                    label: `${i.name} (${i.code})`,
-                                    value: String(i.id)
-                                }))}
-                                value={filters.itemId ? String(filters.itemId) : ""}
-                                onChange={(val) => setFilters({ ...filters, itemId: val ? Number(val) : undefined })}
+                                options={[
+                                    { label: "All Items", value: "all" },
+                                    ...items.map(i => ({
+                                        label: `${i.name} (${i.code})`,
+                                        value: String(i.id)
+                                    }))
+                                ]}
+                                value={String(filters.itemId)}
+                                onChange={(val) => setFilters({ ...filters, itemId: val === "all" ? "all" : Number(val) })}
                                 placeholder="All Items"
                             />
                         </div>
                         <div className="space-y-2">
                             <Label>Site</Label>
                             <Combobox
-                                options={sites.map(s => ({
-                                    label: `${s.name} (${s.type})`,
-                                    value: String(s.id)
-                                }))}
-                                value={filters.siteId ? String(filters.siteId) : ""}
-                                onChange={(val) => setFilters({ ...filters, siteId: val ? Number(val) : undefined })}
+                                options={[
+                                    { label: "All Sites", value: "all" },
+                                    ...sites.map(s => ({
+                                        label: `${s.name} (${s.type})`,
+                                        value: String(s.id)
+                                    }))
+                                ]}
+                                value={String(filters.siteId)}
+                                onChange={(val) => setFilters({ ...filters, siteId: val === "all" ? "all" : Number(val) })}
                                 placeholder="All Sites"
                             />
                         </div>
@@ -164,14 +170,14 @@ function StockMovementReport() {
                                     {movement.stock_out > 0 ? movement.stock_out.toFixed(2) : "-"}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold">
-                                    {filters.itemId ? movement.running_balance.toFixed(2) : "-"}
+                                    {filters.itemId !== "all" ? movement.running_balance.toFixed(2) : "-"}
                                 </TableCell>
                             </TableRow>
                         ))}
                         {movements.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                                    {(filters.itemId || filters.siteId || filters.fromDate || filters.toDate)
+                                    {(filters.itemId !== "all" || filters.siteId !== "all" || filters.fromDate || filters.toDate)
                                         ? "No movements found for the selected criteria."
                                         : "Select filters to view stock movements."}
                                 </TableCell>

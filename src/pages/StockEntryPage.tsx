@@ -4,7 +4,9 @@ import {
     getInventoryTransactionTypes,
     getSites,
     getItems,
+
     createInventoryVoucher,
+    getStockBalance,
     InventoryTransactionType,
     Site,
     Item,
@@ -39,6 +41,18 @@ function StockEntryPage() {
         destination_site_id: undefined,
         items: [{ item_id: 0, quantity: 1 } as any]
     });
+
+    const [stockBalances, setStockBalances] = useState<Record<number, number>>({});
+
+    const fetchStockBalance = async (itemId: number, siteId: number) => {
+        if (!itemId || !siteId) return;
+        try {
+            const balance = await getStockBalance(siteId, itemId);
+            setStockBalances(prev => ({ ...prev, [itemId]: balance }));
+        } catch (error) {
+            console.error("Failed to fetch stock balance:", error);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -132,6 +146,10 @@ function StockEntryPage() {
         const newItems = [...(voucher.items || [])];
         newItems[index] = { ...newItems[index], [field]: value };
         setVoucher(prev => ({ ...prev, items: newItems }));
+
+        if (field === "item_id" && voucher.source_site_id) {
+            fetchStockBalance(value, voucher.source_site_id);
+        }
     };
 
     const handleSave = async () => {
@@ -231,7 +249,13 @@ function StockEntryPage() {
                                 <Combobox
                                     options={filteredSourceSites.map(s => ({ label: `${s.name} (${s.type})`, value: String(s.id) }))}
                                     value={voucher.source_site_id ? String(voucher.source_site_id) : ""}
-                                    onChange={(val) => setVoucher({ ...voucher, source_site_id: Number(val) })}
+                                    onChange={(val) => {
+                                        const siteId = Number(val);
+                                        setVoucher({ ...voucher, source_site_id: siteId });
+                                        voucher.items?.forEach(item => {
+                                            if (item.item_id) fetchStockBalance(item.item_id, siteId);
+                                        });
+                                    }}
                                     placeholder="Select Source Site"
                                     className="h-8 w-full"
                                 />
@@ -290,14 +314,22 @@ function StockEntryPage() {
                                                 placeholder="Select Item"
                                                 className="h-8"
                                             />
+
                                         </TableCell>
                                         <TableCell className="py-1">
-                                            <Input
-                                                type="number"
-                                                value={vi.quantity}
-                                                onChange={(e) => updateItemRow(index, "quantity", Number(e.target.value))}
-                                                className="h-8"
-                                            />
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="number"
+                                                    value={vi.quantity}
+                                                    onChange={(e) => updateItemRow(index, "quantity", Number(e.target.value))}
+                                                    className="h-8 w-20"
+                                                />
+                                                {voucher.source_site_id && vi.item_id && stockBalances[vi.item_id] !== undefined && (
+                                                    <span className="text-xs text-red-500 whitespace-nowrap">
+                                                        ({stockBalances[vi.item_id] > 0 ? stockBalances[vi.item_id] : "-"})
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right py-1 space-x-1">
                                             <Button

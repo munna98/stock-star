@@ -23,7 +23,7 @@ function StockBalanceReport() {
     const [filteredBalances, setFilteredBalances] = useState<StockBalance[]>([]);
     const [filters, setFilters] = useState({
         itemName: "",
-        site: "",
+        site: "all",
     });
 
     useEffect(() => {
@@ -43,18 +43,21 @@ function StockBalanceReport() {
     useEffect(() => {
         const filtered = balances.filter((b) => {
             return (
-                b.item_name.toLowerCase().includes(filters.itemName.toLowerCase()) &&
-                (filters.site === "" || b.site_name === filters.site)
+                (filters.itemName === "" || filters.itemName === "all" || b.item_name.toLowerCase().includes(filters.itemName.toLowerCase())) &&
+                (filters.site === "all" || b.site_name === filters.site)
             );
         });
         setFilteredBalances(filtered);
     }, [filters, balances]);
 
     const uniqueSites = [...new Set(balances.map((b) => b.site_name))];
-    const uniqueItems = Array.from(new Set(balances.map((b) => b.item_name))).map(name => ({
-        label: name,
-        value: name
-    }));
+    const uniqueItems = [
+        { label: "All Items", value: "all" },
+        ...Array.from(new Set(balances.map((b) => b.item_name))).map(name => ({
+            label: name,
+            value: name
+        }))
+    ];
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters((prev) => ({
@@ -66,7 +69,7 @@ function StockBalanceReport() {
     const clearFilters = () => {
         setFilters({
             itemName: "",
-            site: "",
+            site: "all",
         });
     };
 
@@ -91,6 +94,7 @@ function StockBalanceReport() {
                                 <SelectValue placeholder="Site" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="all">All Sites</SelectItem>
                                 {uniqueSites.map((site) => (
                                     <SelectItem key={site} value={site}>
                                         {site}
@@ -117,7 +121,6 @@ function StockBalanceReport() {
                             <TableHead>Brand</TableHead>
                             <TableHead>Model</TableHead>
                             <TableHead>Site</TableHead>
-                            <TableHead>Site Type</TableHead>
                             <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -129,22 +132,22 @@ function StockBalanceReport() {
                                 <TableCell>{balance.brand_name || "N/A"}</TableCell>
                                 <TableCell>{balance.model_name || "N/A"}</TableCell>
                                 <TableCell>{balance.site_name}</TableCell>
-                                <TableCell>
-                                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${balance.site_type === "Warehouse"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : "bg-green-100 text-green-700"
-                                        }`}>
-                                        {balance.site_type}
-                                    </span>
-                                </TableCell>
                                 <TableCell className="text-right font-semibold">
                                     {balance.balance.toFixed(2)}
                                 </TableCell>
                             </TableRow>
                         ))}
+                        {filters.itemName && filters.itemName !== "all" && filteredBalances.length > 0 && (
+                            <TableRow className="bg-muted/50 font-bold">
+                                <TableCell colSpan={5} className="text-right">Total Balance:</TableCell>
+                                <TableCell className="text-right">
+                                    {filteredBalances.reduce((sum, b) => sum + b.balance, 0).toFixed(2)}
+                                </TableCell>
+                            </TableRow>
+                        )}
                         {filteredBalances.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                     No stock balances found.
                                 </TableCell>
                             </TableRow>
