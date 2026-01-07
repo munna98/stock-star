@@ -26,26 +26,33 @@ interface ComboboxProps {
     placeholder?: string
     emptyMessage?: string
     className?: string
+    onKeyDown?: (e: React.KeyboardEvent) => void
+    id?: string
 }
 
-export function Combobox({
+export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(({
     options,
     value,
     onChange,
     placeholder = "Select option...",
     emptyMessage = "No option found.",
     className,
-}: ComboboxProps) {
+    onKeyDown,
+    id,
+}, ref) => {
     const [open, setOpen] = React.useState(false)
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
+                    id={id}
+                    ref={ref}
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
                     className={cn("w-full justify-between font-normal", className)}
+                    onKeyDown={onKeyDown}
                 >
                     {value
                         ? options.find((option) => option.value === value)?.label
@@ -83,4 +90,6 @@ export function Combobox({
             </PopoverContent>
         </Popover>
     )
-}
+})
+Combobox.displayName = "Combobox"
+

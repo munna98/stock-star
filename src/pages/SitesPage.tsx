@@ -165,6 +165,16 @@ function SitesPage() {
                                     placeholder="Full Address"
                                 />
                             </div>
+                            <div className="flex items-center space-x-2 px-2 h-9 mb-[2px]">
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    checked={formData.is_active}
+                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                />
+                                <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
+                            </div>
                             <div className="flex gap-2 shrink-0">
                                 <Button type="submit">{editingId ? "Update Site" : "Add Site"}</Button>
                                 {editingId && (
@@ -188,6 +198,7 @@ function SitesPage() {
                                 <TableHead>Type</TableHead>
                                 <TableHead>Address</TableHead>
                                 <TableHead className="w-[150px]">Stock Actions</TableHead>
+                                <TableHead className="w-[100px]">Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -207,6 +218,7 @@ function SitesPage() {
                                                     size="icon"
                                                     className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                                                     onClick={() => navigate(`/inventory-vouchers?type=Purchase Inward&destination=${site.id}`)}
+                                                    disabled={!site.is_active}
                                                 >
                                                     <PackagePlus className="h-4 w-4" />
                                                 </Button>
@@ -220,6 +232,7 @@ function SitesPage() {
                                                     size="icon"
                                                     className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                                                     onClick={() => navigate(`/inventory-vouchers?type=Material Usage&source=${site.id}`)}
+                                                    disabled={!site.is_active}
                                                 >
                                                     <PackageMinus className="h-4 w-4" />
                                                 </Button>
@@ -233,12 +246,24 @@ function SitesPage() {
                                                     size="icon"
                                                     className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                     onClick={() => navigate(`/inventory-vouchers?type=Stock Adjustment&destination=${site.id}`)}
+                                                    disabled={!site.is_active}
                                                 >
                                                     <Settings2 className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>Adjustment (In)</TooltipContent>
                                         </Tooltip>
+                                    </TableCell>
+                                    <TableCell>
+                                        {site.is_active ? (
+                                            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                                Active
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                                Inactive
+                                            </span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Button

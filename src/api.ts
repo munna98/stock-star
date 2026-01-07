@@ -16,6 +16,7 @@ export interface Item {
     name: string;
     brand_id?: number;
     model_id?: number;
+    is_active: boolean;
 }
 
 export interface Site {
@@ -166,6 +167,16 @@ export const deleteSite = async (id: number): Promise<void> => {
     return await invoke("delete_site", { id });
 };
 
+export interface PaginatedResponse<T> {
+    items: T[];
+    total_count: number;
+}
+
+export interface PaginationParams {
+    page: number;
+    limit: number;
+}
+
 // Inventory Transaction Type API
 export const getInventoryTransactionTypes = async (): Promise<InventoryTransactionType[]> => {
     return await invoke("get_inventory_transaction_types");
@@ -176,16 +187,33 @@ export const createInventoryVoucher = async (voucher: InventoryVoucher): Promise
     return await invoke("create_inventory_voucher", { voucher });
 };
 
-export const getInventoryVouchers = async (): Promise<InventoryVoucherDisplay[]> => {
-    return await invoke("get_inventory_vouchers");
+export const getInventoryVouchers = async (page: number = 1, limit: number = 10): Promise<PaginatedResponse<InventoryVoucherDisplay>> => {
+    return await invoke("get_inventory_vouchers", { page, limit });
+};
+
+export const getInventoryVoucher = async (id: number): Promise<InventoryVoucher> => {
+    return await invoke("get_inventory_voucher", { id });
+};
+
+export const updateInventoryVoucher = async (voucher: InventoryVoucher): Promise<void> => {
+    return await invoke("update_inventory_voucher", { voucher });
+};
+
+export const deleteInventoryVoucher = async (id: number): Promise<void> => {
+    return await invoke("delete_inventory_voucher", { id });
 };
 
 export const getStockBalance = async (siteId: number, itemId: number): Promise<number> => {
     return await invoke("get_stock_balance", { siteId, itemId });
 };
 
-export const getStockBalances = async (): Promise<StockBalance[]> => {
-    return await invoke("get_stock_balances");
+export const getStockBalances = async (
+    itemName?: string,
+    siteId?: number,
+    page: number = 1,
+    limit: number = 10
+): Promise<PaginatedResponse<StockBalance>> => {
+    return await invoke("get_stock_balances", { itemName, siteId, page, limit });
 };
 
 export const getItemStockBySites = async (itemId: number): Promise<StockBalance[]> => {
@@ -200,12 +228,27 @@ export const getStockMovementHistory = async (
     itemId?: number,
     siteId?: number,
     fromDate?: string,
-    toDate?: string
-): Promise<StockMovementHistory[]> => {
+    toDate?: string,
+    page: number = 1,
+    limit: number = 10
+): Promise<PaginatedResponse<StockMovementHistory>> => {
     return await invoke("get_stock_movement_history", {
         itemId,
         siteId,
         fromDate,
-        toDate
+        toDate,
+        page,
+        limit
     });
 };
+
+export interface DashboardStats {
+    active_items_count: number;
+    active_sites_count: number;
+    recent_transactions_count: number;
+}
+
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+    return await invoke("get_dashboard_stats");
+};
+

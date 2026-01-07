@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getStockMovementHistory, getItems, getSites, StockMovementHistory, Item, Site } from "../api";
+import { formatDate } from "@/lib/utils";
 import {
     Table,
     TableBody,
@@ -10,15 +11,21 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { X } from "lucide-react";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 function StockMovementReport() {
     const [movements, setMovements] = useState<StockMovementHistory[]>([]);
     const [items, setItems] = useState<Item[]>([]);
     const [sites, setSites] = useState<Site[]>([]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalCount, setTotalCount] = useState(0);
 
     const [filters, setFilters] = useState({
         itemId: "all" as number | "all",
@@ -45,8 +52,13 @@ function StockMovementReport() {
     };
 
     useEffect(() => {
-        handleSearch();
+        // Reset to page 1 when filters change
+        setCurrentPage(1);
     }, [filters]);
+
+    useEffect(() => {
+        handleSearch();
+    }, [filters, currentPage, pageSize]);
 
     const handleSearch = async () => {
         try {
@@ -54,9 +66,12 @@ function StockMovementReport() {
                 filters.itemId === "all" ? undefined : filters.itemId,
                 filters.siteId === "all" ? undefined : filters.siteId,
                 filters.fromDate || undefined,
-                filters.toDate || undefined
+                filters.toDate || undefined,
+                currentPage,
+                pageSize
             );
-            setMovements(data);
+            setMovements(data.items);
+            setTotalCount(data.total_count);
         } catch (error) {
             console.error("Failed to fetch movements:", error);
         }
@@ -69,7 +84,9 @@ function StockMovementReport() {
             fromDate: "",
             toDate: "",
         });
+        setCurrentPage(1);
         setMovements([]);
+        setTotalCount(0);
     };
 
     return (
@@ -137,55 +154,68 @@ function StockMovementReport() {
                 </CardContent>
             </Card>
 
-            <div className="rounded-md border bg-card">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Voucher No</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Item</TableHead>
-                            <TableHead>Site</TableHead>
-                            <TableHead>Remarks</TableHead>
-                            <TableHead className="text-right">In</TableHead>
-                            <TableHead className="text-right">Out</TableHead>
-                            <TableHead className="text-right">Balance</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {movements.map((movement) => (
-                            <TableRow key={movement.id}>
-                                <TableCell>{movement.voucher_date}</TableCell>
-                                <TableCell className="font-medium">{movement.transaction_number}</TableCell>
-                                <TableCell>{movement.voucher_type_name}</TableCell>
-                                <TableCell>{movement.item_name}</TableCell>
-                                <TableCell>{movement.site_name}</TableCell>
-                                <TableCell className="max-w-[200px] truncate" title={movement.remarks || ""}>
-                                    {movement.remarks || "-"}
-                                </TableCell>
-                                <TableCell className="text-right text-green-600 font-medium">
-                                    {movement.stock_in > 0 ? movement.stock_in.toFixed(2) : "-"}
-                                </TableCell>
-                                <TableCell className="text-right text-red-600 font-medium">
-                                    {movement.stock_out > 0 ? movement.stock_out.toFixed(2) : "-"}
-                                </TableCell>
-                                <TableCell className="text-right font-semibold">
-                                    {filters.itemId !== "all" ? movement.running_balance.toFixed(2) : "-"}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {movements.length === 0 && (
+            <Card className="rounded-md border bg-card">
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                                    {(filters.itemId !== "all" || filters.siteId !== "all" || filters.fromDate || filters.toDate)
-                                        ? "No movements found for the selected criteria."
-                                        : "Select filters to view stock movements."}
-                                </TableCell>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Voucher No</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Item</TableHead>
+                                <TableHead>Site</TableHead>
+                                <TableHead>Remarks</TableHead>
+                                <TableHead className="text-right">In</TableHead>
+                                <TableHead className="text-right">Out</TableHead>
+                                <TableHead className="text-right">Balance</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {movements.map((movement) => (
+                                <TableRow key={movement.id}>
+                                    <TableCell>{formatDate(movement.voucher_date)}</TableCell>
+                                    <TableCell className="font-medium">{movement.transaction_number}</TableCell>
+                                    <TableCell>{movement.voucher_type_name}</TableCell>
+                                    <TableCell>{movement.item_name}</TableCell>
+                                    <TableCell>{movement.site_name}</TableCell>
+                                    <TableCell className="max-w-[200px] truncate" title={movement.remarks || ""}>
+                                        {movement.remarks || "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right text-green-600 font-medium">
+                                        {movement.stock_in > 0 ? movement.stock_in.toFixed(2) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right text-red-600 font-medium">
+                                        {movement.stock_out > 0 ? movement.stock_out.toFixed(2) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                        {filters.itemId !== "all" ? movement.running_balance.toFixed(2) : "-"}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {movements.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                        {(filters.itemId !== "all" || filters.siteId !== "all" || filters.fromDate || filters.toDate)
+                                            ? "No movements found for the selected criteria."
+                                            : "Select filters to view stock movements."}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+                <CardFooter className="border-t p-0">
+                    <div className="w-full">
+                        <PaginationControls
+                            currentPage={currentPage}
+                            totalCount={totalCount}
+                            pageSize={pageSize}
+                            onPageChange={setCurrentPage}
+                            onPageSizeChange={setPageSize}
+                        />
+                    </div>
+                </CardFooter>
+            </Card>
         </div>
     );
 }

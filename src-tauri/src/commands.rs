@@ -103,8 +103,27 @@ pub fn create_inventory_voucher(app: AppHandle, voucher: InventoryVoucher) -> Re
 }
 
 #[command]
-pub fn get_inventory_vouchers(app: AppHandle) -> Result<Vec<InventoryVoucherDisplay>, String> {
-    db::get_all_inventory_vouchers(&app).map_err(|e| e.to_string())
+pub fn get_inventory_vouchers(
+    app: AppHandle,
+    page: i64,
+    limit: i64,
+) -> Result<db::PaginatedResponse<InventoryVoucherDisplay>, String> {
+    db::get_inventory_vouchers(&app, page, limit).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_inventory_voucher(app: AppHandle, id: i64) -> Result<InventoryVoucher, String> {
+    db::get_inventory_voucher(&app, id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_inventory_voucher(app: AppHandle, voucher: InventoryVoucher) -> Result<(), String> {
+    db::update_inventory_voucher(&app, voucher).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn delete_inventory_voucher(app: AppHandle, id: i64) -> Result<(), String> {
+    db::delete_inventory_voucher(&app, id).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -113,8 +132,14 @@ pub fn get_stock_balance(app: AppHandle, site_id: i64, item_id: i64) -> Result<f
 }
 
 #[command]
-pub fn get_stock_balances(app: AppHandle) -> Result<Vec<db::StockBalance>, String> {
-    db::get_stock_balances(&app).map_err(|e| e.to_string())
+pub fn get_stock_balances(
+    app: AppHandle,
+    item_name: Option<String>,
+    site_id: Option<i64>,
+    page: i64,
+    limit: i64,
+) -> Result<db::PaginatedResponse<db::StockBalance>, String> {
+    db::get_stock_balances(&app, item_name, site_id, page, limit).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -140,7 +165,14 @@ pub fn get_stock_movement_history(
     site_id: Option<i64>,
     from_date: Option<String>,
     to_date: Option<String>,
-) -> Result<Vec<db::StockMovementHistory>, String> {
-    db::get_stock_movement_history(&app, item_id, site_id, from_date, to_date)
+    page: i64,
+    limit: i64,
+) -> Result<db::PaginatedResponse<db::StockMovementHistory>, String> {
+    db::get_stock_movement_history(&app, item_id, site_id, from_date, to_date, page, limit)
         .map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn get_dashboard_stats(app: AppHandle) -> Result<db::DashboardStats, String> {
+    db::get_dashboard_stats(&app).map_err(|e| e.to_string())
 }

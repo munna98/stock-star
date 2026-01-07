@@ -30,6 +30,7 @@ function ItemsPage() {
         name: "",
         brand_id: undefined,
         model_id: undefined,
+        is_active: true,
     });
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -65,6 +66,7 @@ function ItemsPage() {
                 name: "",
                 brand_id: undefined,
                 model_id: undefined,
+                is_active: true,
             });
             setEditingId(null);
             fetchData();
@@ -81,6 +83,7 @@ function ItemsPage() {
             name: item.name,
             brand_id: item.brand_id,
             model_id: item.model_id,
+            is_active: item.is_active,
         });
     };
 
@@ -91,6 +94,7 @@ function ItemsPage() {
             name: "",
             brand_id: undefined,
             model_id: undefined,
+            is_active: true,
         });
     };
 
@@ -173,6 +177,16 @@ function ItemsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="flex items-center space-x-2 px-2 h-9 mb-[2px]">
+                            <input
+                                type="checkbox"
+                                id="is_active"
+                                checked={formData.is_active}
+                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
+                        </div>
                         <div className="flex gap-2 shrink-0">
                             <Button type="submit">{editingId ? "Update Item" : "Add Item"}</Button>
                             {editingId && (
@@ -195,6 +209,7 @@ function ItemsPage() {
                             <TableHead>Name</TableHead>
                             <TableHead>Brand</TableHead>
                             <TableHead>Model</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -206,6 +221,17 @@ function ItemsPage() {
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell>{getBrandName(item.brand_id)}</TableCell>
                                 <TableCell>{getModelName(item.model_id)}</TableCell>
+                                <TableCell>
+                                    {item.is_active ? (
+                                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                            Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                            Inactive
+                                        </span>
+                                    )}
+                                </TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button
                                         variant="ghost"

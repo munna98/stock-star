@@ -11,9 +11,10 @@ function Layout() {
         { path: "/brands", label: "Brands" },
         { path: "/models", label: "Models" },
         { path: "/sites", label: "Sites" },
-        { path: "/inventory-vouchers", label: "Transactions" },
+        { path: "/inventory-vouchers", label: "Entry" },
+        { path: "/transactions", label: "History" },
         { path: "/stock-balance", label: "Stock Balance" },
-        { path: "/stock-movements", label: "Stock History" },
+        { path: "/stock-movements", label: "Stock Movement" },
     ];
 
     return (
@@ -22,7 +23,7 @@ function Layout() {
                 <div className="container flex h-16 items-center justify-between px-8">
                     <div className="flex items-center gap-6 md:gap-10">
                         <Link to="/" className="flex items-center space-x-2">
-                            <span className="inline-block font-bold text-2xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                            <span className="inline-block font-bold text-2xl text-primary">
                                 Stock Star
                             </span>
                         </Link>
