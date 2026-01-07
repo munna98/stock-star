@@ -179,15 +179,6 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
     // Seed initial data
     seed_transaction_types(&conn)?;
 
-    // Migrations
-    // Add remarks column to inventory_vouchers if it doesn't exist
-    let _ = conn.execute("ALTER TABLE inventory_vouchers ADD COLUMN remarks TEXT", []);
-    // Add is_active column to items if it doesn't exist
-    let _ = conn.execute(
-        "ALTER TABLE items ADD COLUMN is_active BOOLEAN DEFAULT 1",
-        [],
-    );
-
     Ok(())
 }
 
@@ -260,6 +251,7 @@ fn create_tables(conn: &Connection) -> Result<()> {
             source_site_id INTEGER,
             destination_site_id INTEGER,
             voucher_type_id INTEGER,
+            remarks TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             created_by INTEGER,
             updated_at DATETIME,
