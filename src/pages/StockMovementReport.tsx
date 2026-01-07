@@ -140,6 +140,7 @@ function StockMovementReport() {
                             <TableHead>Type</TableHead>
                             <TableHead>Item</TableHead>
                             <TableHead>Site</TableHead>
+                            <TableHead>Remarks</TableHead>
                             <TableHead className="text-right">In</TableHead>
                             <TableHead className="text-right">Out</TableHead>
                             <TableHead className="text-right">Balance</TableHead>
@@ -153,6 +154,9 @@ function StockMovementReport() {
                                 <TableCell>{movement.voucher_type_name}</TableCell>
                                 <TableCell>{movement.item_name}</TableCell>
                                 <TableCell>{movement.site_name}</TableCell>
+                                <TableCell className="max-w-[200px] truncate" title={movement.remarks || ""}>
+                                    {movement.remarks || "-"}
+                                </TableCell>
                                 <TableCell className="text-right text-green-600 font-medium">
                                     {movement.stock_in > 0 ? movement.stock_in.toFixed(2) : "-"}
                                 </TableCell>
@@ -166,7 +170,7 @@ function StockMovementReport() {
                         ))}
                         {movements.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                     {(filters.itemId || filters.siteId || filters.fromDate || filters.toDate)
                                         ? "No movements found for the selected criteria."
                                         : "Select filters to view stock movements."}

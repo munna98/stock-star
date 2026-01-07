@@ -52,6 +52,7 @@ pub struct InventoryVoucher {
     pub destination_site_id: Option<i64>,
     pub voucher_type_id: i64,
     pub items: Vec<InventoryVoucherItem>,
+    pub remarks: Option<String>,
     pub created_at: Option<String>,
     pub created_by: Option<i64>,
 }
@@ -75,6 +76,7 @@ pub struct InventoryVoucherDisplay {
     pub destination_site_name: Option<String>,
     pub voucher_type_id: i64,
     pub voucher_type_name: String,
+    pub remarks: Option<String>,
     pub created_at: String,
 }
 
@@ -120,6 +122,7 @@ pub struct StockMovementHistory {
     pub stock_in: f64,
     pub stock_out: f64,
     pub running_balance: f64,
+    pub remarks: Option<String>,
     pub created_at: String,
 }
 
@@ -161,6 +164,10 @@ pub fn init_db(app: &AppHandle) -> Result<()> {
 
     // Seed initial data
     seed_transaction_types(&conn)?;
+
+    // Migrations
+    // Add remarks column to inventory_vouchers if it doesn't exist
+    let _ = conn.execute("ALTER TABLE inventory_vouchers ADD COLUMN remarks TEXT", []);
 
     Ok(())
 }
@@ -501,28 +508,65 @@ pub fn create_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) 
     )?;
     let transaction_number = next_number.to_string();
 
+    // Get transaction type name for movement logic and remarks generation
+    let type_name: String = tx.query_row(
+        "SELECT name FROM inventory_transaction_types WHERE id = ?1",
+        params![voucher.voucher_type_id],
+        |row| row.get(0),
+    )?;
+
+    // Auto-generate remarks if empty
+    if voucher.remarks.is_none() || voucher.remarks.as_ref().unwrap().trim().is_empty() {
+        let mut generated_remark = type_name.clone();
+
+        let src_name: Option<String> = if let Some(sid) = voucher.source_site_id {
+            tx.query_row("SELECT name FROM sites WHERE id = ?", params![sid], |row| {
+                row.get(0)
+            })
+            .ok()
+        } else {
+            None
+        };
+
+        let dest_name: Option<String> = if let Some(did) = voucher.destination_site_id {
+            tx.query_row("SELECT name FROM sites WHERE id = ?", params![did], |row| {
+                row.get(0)
+            })
+            .ok()
+        } else {
+            None
+        };
+
+        match type_name.as_str() {
+            "Godown → Site" | "Site → Godown" | "Site → Site" => {
+                if let (Some(src), Some(dest)) = (src_name, dest_name) {
+                    generated_remark = format!("Transfer: {} -> {}", src, dest);
+                }
+            }
+            "Purchase Inward" => {
+                // Keep default or maybe add "Recv at " + dest_name
+            }
+            _ => {}
+        }
+        voucher.remarks = Some(generated_remark);
+    }
+
     // Insert Voucher
     tx.execute(
-        "INSERT INTO inventory_vouchers (transaction_number, voucher_date, source_site_id, destination_site_id, voucher_type_id, created_by) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO inventory_vouchers (transaction_number, voucher_date, source_site_id, destination_site_id, voucher_type_id, remarks, created_by) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             transaction_number,
             voucher.voucher_date,
             voucher.source_site_id,
             voucher.destination_site_id,
             voucher.voucher_type_id,
+            voucher.remarks,
             voucher.created_by
         ],
     )?;
     let voucher_id = tx.last_insert_rowid();
     voucher.id = Some(voucher_id);
-
-    // Get transaction type name for movement logic
-    let type_name: String = tx.query_row(
-        "SELECT name FROM inventory_transaction_types WHERE id = ?1",
-        params![voucher.voucher_type_id],
-        |row| row.get(0),
-    )?;
 
     // Insert Items and create Stock Movements
     for item in &voucher.items {
@@ -616,6 +660,7 @@ pub fn get_all_inventory_vouchers(app: &AppHandle) -> Result<Vec<InventoryVouche
             d.name as destination_site_name,
             v.voucher_type_id,
             t.name as voucher_type_name,
+            v.remarks,
             v.created_at
          FROM inventory_vouchers v
          LEFT JOIN sites s ON v.source_site_id = s.id
@@ -635,7 +680,8 @@ pub fn get_all_inventory_vouchers(app: &AppHandle) -> Result<Vec<InventoryVouche
             destination_site_name: row.get(6)?,
             voucher_type_id: row.get(7)?,
             voucher_type_name: row.get(8)?,
-            created_at: row.get(9).unwrap_or_default(),
+            remarks: row.get(9)?,
+            created_at: row.get(10).unwrap_or_default(),
         })
     })?;
 
@@ -838,6 +884,7 @@ pub fn get_stock_movement_history(
             s.name as site_name,
             sm.stock_in,
             sm.stock_out,
+            v.remarks,
             sm.created_at
          FROM stock_movements sm
          JOIN inventory_vouchers v ON sm.voucher_id = v.id
@@ -890,8 +937,9 @@ pub fn get_stock_movement_history(
                 site_name: row.get(10)?,
                 stock_in: row.get(11)?,
                 stock_out: row.get(12)?,
+                remarks: row.get(13)?,
                 running_balance: 0.0, // Will calculate below
-                created_at: row.get(13)?,
+                created_at: row.get(14)?,
             })
         })?
         .collect::<Result<Vec<_>>>()?;

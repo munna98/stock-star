@@ -83,7 +83,7 @@ function StockEntryPage() {
     // Filter sites based on transaction type
     const getSourceSites = () => {
         if (!selectedType) return sites;
-        
+
         switch (selectedType.name) {
             case "Godown → Site":
                 return sites.filter(s => s.type === "Warehouse");
@@ -98,7 +98,7 @@ function StockEntryPage() {
 
     const getDestinationSites = () => {
         if (!selectedType) return sites;
-        
+
         switch (selectedType.name) {
             case "Godown → Site":
                 return sites.filter(s => s.type === "Site");
@@ -253,6 +253,16 @@ function StockEntryPage() {
                             ) : (
                                 <div className="h-8 bg-muted rounded w-full" />
                             )}
+                        </div>
+
+                        <div className="flex-1 min-w-[200px]">
+                            <Label>Remarks</Label>
+                            <Input
+                                value={voucher.remarks || ""}
+                                onChange={(e) => setVoucher({ ...voucher, remarks: e.target.value })}
+                                placeholder="Optional remarks"
+                                className="h-8 w-full"
+                            />
                         </div>
                     </CardContent>
                 </Card>

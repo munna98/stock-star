@@ -40,6 +40,7 @@ export interface InventoryVoucher {
     destination_site_id?: number;
     voucher_type_id: number;
     items: InventoryVoucherItem[];
+    remarks?: string;
     created_at?: string;
     created_by?: number;
 }
@@ -54,6 +55,7 @@ export interface InventoryVoucherDisplay {
     destination_site_name?: string;
     voucher_type_id: number;
     voucher_type_name: string;
+    remarks?: string;
     created_at: string;
 }
 
@@ -92,6 +94,7 @@ export interface StockMovementHistory {
     stock_in: number;
     stock_out: number;
     running_balance: number;
+    remarks?: string;
     created_at: string;
 }
 
