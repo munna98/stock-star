@@ -258,3 +258,14 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     return await invoke("get_dashboard_stats");
 };
 
+export interface ImportItem {
+    code: string;
+    name: string;
+    brand_name: string;
+    model_name: string;
+}
+
+export const importItems = async (items: ImportItem[]): Promise<void> => {
+    return await invoke("import_items", { items });
+};
+

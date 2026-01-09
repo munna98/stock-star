@@ -210,7 +210,10 @@ function StockBalanceReport() {
                             totalCount={totalCount}
                             pageSize={pageSize}
                             onPageChange={setCurrentPage}
-                            onPageSizeChange={setPageSize}
+                            onPageSizeChange={(size) => {
+                                setPageSize(size);
+                                setCurrentPage(1);
+                            }}
                         />
                     </div>
                 </CardFooter>

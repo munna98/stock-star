@@ -23,11 +23,12 @@ export function PaginationControls({
     pageSize,
     onPageChange,
     onPageSizeChange,
-    pageSizeOptions = [50, 100, 200, 500],
+    pageSizeOptions = [50, 100, 200, 500, -1],
 }: PaginationControlsProps) {
-    const totalPages = Math.ceil(totalCount / pageSize);
-    const startItem = (currentPage - 1) * pageSize + 1;
-    const endItem = Math.min(currentPage * pageSize, totalCount);
+    const isAll = pageSize === -1;
+    const totalPages = isAll ? 1 : Math.ceil(totalCount / pageSize);
+    const startItem = isAll ? 1 : (currentPage - 1) * pageSize + 1;
+    const endItem = isAll ? totalCount : Math.min(currentPage * pageSize, totalCount);
 
     return (
         <div className="flex items-center justify-between px-2 py-4">
@@ -40,12 +41,12 @@ export function PaginationControls({
                     }}
                 >
                     <SelectTrigger className="h-8 w-[70px]">
-                        <SelectValue placeholder={pageSize} />
+                        <SelectValue placeholder={isAll ? "All" : pageSize} />
                     </SelectTrigger>
                     <SelectContent side="top">
                         {pageSizeOptions.map((size) => (
                             <SelectItem key={size} value={size.toString()}>
-                                {size}
+                                {size === -1 ? "All" : size}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -62,7 +63,7 @@ export function PaginationControls({
                     size="sm"
                     className="h-8 w-8 p-0"
                     onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage <= 1}
+                    disabled={currentPage <= 1 || isAll}
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -74,7 +75,7 @@ export function PaginationControls({
                     size="sm"
                     className="h-8 w-8 p-0"
                     onClick={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
+                    disabled={currentPage >= totalPages || isAll}
                 >
                     <ChevronRight className="h-4 w-4" />
                 </Button>

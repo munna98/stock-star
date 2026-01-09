@@ -144,6 +144,14 @@ pub struct DashboardStats {
     pub recent_transactions_count: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportItem {
+    pub code: String,
+    pub name: String,
+    pub brand_name: String,
+    pub model_name: String,
+}
+
 // ============================================================================
 // Database Connection
 // ============================================================================
@@ -464,6 +472,59 @@ pub fn delete_item(app: &AppHandle, id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn import_items(app: &AppHandle, items: Vec<ImportItem>) -> Result<()> {
+    let mut conn = get_db_conn(app)?;
+    let tx = conn.transaction()?;
+
+    for item in items {
+        // 1. Get or Create Brand
+        let brand_id: i64 = match tx.query_row(
+            "SELECT id FROM brands WHERE name = ?1",
+            params![item.brand_name],
+            |row| row.get(0),
+        ) {
+            Ok(id) => id,
+            Err(_) => {
+                tx.execute(
+                    "INSERT INTO brands (name) VALUES (?1)",
+                    params![item.brand_name],
+                )?;
+                tx.last_insert_rowid()
+            }
+        };
+
+        // 2. Get or Create Model
+        let model_id: i64 = match tx.query_row(
+            "SELECT id FROM models WHERE name = ?1",
+            params![item.model_name],
+            |row| row.get(0),
+        ) {
+            Ok(id) => id,
+            Err(_) => {
+                tx.execute(
+                    "INSERT INTO models (name) VALUES (?1)",
+                    params![item.model_name],
+                )?;
+                tx.last_insert_rowid()
+            }
+        };
+
+        // 3. Upsert Item based on code
+        tx.execute(
+            "INSERT INTO items (code, name, brand_id, model_id, is_active) 
+             VALUES (?1, ?2, ?3, ?4, 1)
+             ON CONFLICT(code) DO UPDATE SET 
+                name = excluded.name,
+                brand_id = excluded.brand_id,
+                model_id = excluded.model_id",
+            params![item.code, item.name, brand_id, model_id],
+        )?;
+    }
+
+    tx.commit()?;
+    Ok(())
+}
+
 // ============================================================================
 // Site Operations
 // ============================================================================
@@ -701,7 +762,12 @@ pub fn get_inventory_vouchers(
         })?;
 
     // 2. Get Page Items
-    let offset = (page - 1) * limit;
+    let (limit_val, offset) = if limit == -1 {
+        (-1, 0)
+    } else {
+        (limit, (page - 1) * limit)
+    };
+
     let mut stmt = conn.prepare(
         "SELECT 
             v.id, 
@@ -723,7 +789,7 @@ pub fn get_inventory_vouchers(
          LIMIT ?1 OFFSET ?2",
     )?;
 
-    let rows = stmt.query_map(params![limit, offset], |row| {
+    let rows = stmt.query_map(params![limit_val, offset], |row| {
         Ok(InventoryVoucherDisplay {
             id: row.get(0)?,
             transaction_number: row.get(1)?,
@@ -965,8 +1031,6 @@ pub fn get_stock_balances(
     );
     let total_count: i64 = conn.query_row(&count_query, &param_refs[..], |row| row.get(0))?;
 
-    // 2. Get Page Items
-    let offset = (page - 1) * limit;
     let query = format!(
         "SELECT 
             i.id as item_id,
@@ -992,8 +1056,14 @@ pub fn get_stock_balances(
         where_sql
     );
 
+    let (limit_val, offset) = if limit == -1 {
+        (-1, 0)
+    } else {
+        (limit, (page - 1) * limit)
+    };
+
     let mut final_params_refs = param_refs.clone();
-    final_params_refs.push(&limit);
+    final_params_refs.push(&limit_val);
     final_params_refs.push(&offset);
 
     let mut stmt = conn.prepare(&query)?;
@@ -1195,7 +1265,12 @@ pub fn get_stock_movement_history(
     }
 
     // 2b. Add skipped rows balance (for pagination > page 1)
-    let offset = (page - 1) * limit;
+    let (limit_val, offset) = if limit == -1 {
+        (-1, 0)
+    } else {
+        (limit, (page - 1) * limit)
+    };
+
     if offset > 0 && item_id.is_some() {
         // We need to sum stock_in - stock_out for the rows that are skipped by OFFSET
         // To do this reliably, we must use the exact same ORDER BY as the main query
@@ -1261,7 +1336,7 @@ pub fn get_stock_movement_history(
     );
 
     let mut final_params_refs = param_refs.clone();
-    final_params_refs.push(&limit);
+    final_params_refs.push(&limit_val);
     final_params_refs.push(&offset);
 
     let mut stmt = conn.prepare(&query)?;

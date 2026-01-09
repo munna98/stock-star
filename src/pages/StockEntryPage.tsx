@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useEnterKeyNavigation } from "../hooks/useEnterKeyNavigation";
 import {
@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Save, Printer, RotateCcw, Clock, X } from "lucide-react";
+import { Trash2, Plus, Save, Printer, RotateCcw, Clock, X, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Combobox } from "@/components/ui/combobox";
 
 function StockEntryPage() {
@@ -41,6 +42,7 @@ function StockEntryPage() {
     const isViewMode = searchParams.get("view_id") != null;
     const { handleKeyDown } = useEnterKeyNavigation();
     const [focusNewRow, setFocusNewRow] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [voucher, setVoucher] = useState<Partial<InventoryVoucher>>({
         voucher_date: new Date().toISOString().split('T')[0],
@@ -267,6 +269,88 @@ function StockEntryPage() {
         navigate("/transactions");
     };
 
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const bstr = evt.target?.result;
+                const wb = XLSX.read(bstr, { type: "binary" });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                // Expected headers: Item Code (or Code), Qty
+                const importedItems: any[] = [];
+                const notFoundCodes: string[] = [];
+
+                data.forEach((row: any) => {
+                    const code = row["Item Code"] || row["Code"];
+                    const qty = row["Qty"] || row["Quantity"]; // Fallback to Quantity just in case
+
+                    if (code && qty) {
+                        const item = items.find(i => i.code === String(code));
+                        if (item && item.id) {
+                            importedItems.push({
+                                item_id: item.id,
+                                quantity: Number(qty)
+                            });
+                        } else {
+                            notFoundCodes.push(String(code));
+                        }
+                    }
+                });
+
+                if (importedItems.length > 0) {
+                    setVoucher(prev => {
+                        // Filter out empty placeholder if it's the only item
+                        const currentItems = (prev.items?.length === 1 && prev.items[0].item_id === 0)
+                            ? []
+                            : (prev.items || []);
+
+                        return {
+                            ...prev,
+                            // Append new items to existing ones
+                            items: [...currentItems, ...importedItems]
+                        };
+                    });
+
+                    // Fetch balances for new items if source site is selected
+                    if (voucher.source_site_id) {
+                        importedItems.forEach(item => {
+                            fetchStockBalance(item.item_id, voucher.source_site_id!);
+                        });
+                    }
+
+                    let message = `Successfully imported ${importedItems.length} items.`;
+                    if (notFoundCodes.length > 0) {
+                        message += `\n\n${notFoundCodes.length} items not found:\n${notFoundCodes.join(", ")}`;
+                    }
+                    alert(message);
+                } else if (notFoundCodes.length > 0) {
+                    alert(`No valid items found.\n\n${notFoundCodes.length} items not found:\n${notFoundCodes.join(", ")}`);
+                } else {
+                    alert("No data found in the file. Please check headers: 'Item Code' (or 'Code') and 'Qty'.");
+                }
+
+            } catch (error) {
+                console.error("Failed to import items:", error);
+                alert("Error importing items: " + error);
+            } finally {
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
     return (
         <div className="flex flex-col h-[calc(100vh-140px)]">
             <div className="flex-1 space-y-6 overflow-y-auto pb-20 pr-1">
@@ -277,6 +361,14 @@ function StockEntryPage() {
                         View History
                     </Button>
                 </div>
+
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileChange}
+                />
 
                 <Card className="border-2">
                     <CardContent className="flex flex-row gap-4 items-end pt-4 pb-4">
@@ -379,7 +471,22 @@ function StockEntryPage() {
                             <TableHeader>
                                 <TableRow className="h-10">
                                     <TableHead className="w-[50px] py-1">#</TableHead>
-                                    <TableHead className="py-1">Item Name</TableHead>
+                                    <TableHead className="py-1">
+                                        <div className="flex items-center justify-between">
+                                            <span>Item Name</span>
+                                            {!isViewMode && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={handleImportClick}
+                                                    className="h-6 gap-1 text-xs"
+                                                >
+                                                    <Upload className="h-3 w-3" />
+                                                    Import
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </TableHead>
                                     <TableHead className="w-[120px] py-1">Quantity</TableHead>
                                     <TableHead className="w-[100px] text-right py-1">Action</TableHead>
                                 </TableRow>

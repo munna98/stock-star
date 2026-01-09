@@ -44,7 +44,8 @@ pub fn run() {
             commands::get_item_stock_by_sites,
             commands::get_site_stock_balances,
             commands::get_stock_movement_history,
-            commands::get_dashboard_stats
+            commands::get_dashboard_stats,
+            commands::import_items
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

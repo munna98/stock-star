@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { createItem, deleteItem, getItems, getBrands, getModels, updateItem, Brand, Model, Item } from "../api";
+import { useEffect, useState, useRef } from "react";
+import { createItem, deleteItem, getItems, getBrands, getModels, updateItem, Brand, Model, Item, importItems, ImportItem } from "../api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Trash2, Pencil, X } from "lucide-react";
+import { Trash2, Pencil, X, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
 
 function ItemsPage() {
     const [items, setItems] = useState<Item[]>([]);
@@ -33,6 +34,7 @@ function ItemsPage() {
         is_active: true,
     });
     const [editingId, setEditingId] = useState<number | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchData = async () => {
         try {
@@ -109,6 +111,53 @@ function ItemsPage() {
         }
     };
 
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target?.result;
+                const wb = XLSX.read(bstr, { type: "binary" });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                // Map data to ImportItem format
+                // Expected headers: Code, Name, Brand, Model
+                const importData: ImportItem[] = data.map((row: any) => ({
+                    code: row.Code?.toString() || "",
+                    name: row.Name?.toString() || "",
+                    brand_name: row.Brand?.toString() || "",
+                    model_name: row.Model?.toString() || "",
+                })).filter(item => item.code && item.name); // Basic validation
+
+                if (importData.length === 0) {
+                    alert("No valid items found in the file. Please check headers: Code, Name, Brand, Model");
+                    return;
+                }
+
+                await importItems(importData);
+                alert("Items imported successfully!");
+                fetchData();
+            } catch (error) {
+                console.error("Failed to import items:", error);
+                alert("Error importing items: " + error);
+            } finally {
+                // Reset file input
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
     const getBrandName = (id?: number) => brands.find((b) => b.id === id)?.name || "N/A";
     const getModelName = (id?: number) => models.find((m) => m.id === id)?.name || "N/A";
 
@@ -116,6 +165,19 @@ function ItemsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Items Management</h2>
+                <div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".xlsx, .xls"
+                        onChange={handleFileChange}
+                    />
+                    <Button onClick={handleImportClick} variant="outline" className="gap-2">
+                        <Upload className="h-4 w-4" />
+                        Import Items
+                    </Button>
+                </div>
             </div>
 
             <Card>

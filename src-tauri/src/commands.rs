@@ -1,6 +1,6 @@
 use crate::db::{
-    self, Brand, InventoryTransactionType, InventoryVoucher, InventoryVoucherDisplay, Item, Model,
-    Site,
+    self, Brand, ImportItem, InventoryTransactionType, InventoryVoucher, InventoryVoucherDisplay,
+    Item, Model, Site,
 };
 use tauri::{command, AppHandle};
 
@@ -23,6 +23,11 @@ pub fn update_item(app: AppHandle, item: Item) -> Result<(), String> {
 #[command]
 pub fn delete_item(app: AppHandle, id: i64) -> Result<(), String> {
     db::delete_item(&app, id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn import_items(app: AppHandle, items: Vec<ImportItem>) -> Result<(), String> {
+    db::import_items(&app, items).map_err(|e| e.to_string())
 }
 
 // Brand Commands
