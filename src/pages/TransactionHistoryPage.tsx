@@ -12,7 +12,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Edit, Trash2, Plus, Printer } from "lucide-react";
+import { Edit, Trash2, Plus, Printer, Eye } from "lucide-react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function TransactionHistoryPage() {
@@ -51,6 +51,10 @@ export default function TransactionHistoryPage() {
 
     const handleEdit = (id: number) => {
         navigate(`/inventory-vouchers?edit_id=${id}`);
+    };
+
+    const handleView = (id: number) => {
+        navigate(`/inventory-vouchers?view_id=${id}`);
     };
 
     return (
@@ -110,6 +114,14 @@ export default function TransactionHistoryPage() {
                                                     className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                                 >
                                                     <Printer className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleView(t.id)}
+                                                    className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50"
+                                                >
+                                                    <Eye className="h-4 w-4" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"

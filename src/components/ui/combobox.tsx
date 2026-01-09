@@ -28,6 +28,7 @@ interface ComboboxProps {
     className?: string
     onKeyDown?: (e: React.KeyboardEvent) => void
     id?: string
+    disabled?: boolean
 }
 
 export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(({
@@ -39,11 +40,12 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(({
     className,
     onKeyDown,
     id,
+    disabled,
 }, ref) => {
     const [open, setOpen] = React.useState(false)
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     id={id}
@@ -53,6 +55,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(({
                     aria-expanded={open}
                     className={cn("w-full justify-between font-normal", className)}
                     onKeyDown={onKeyDown}
+                    disabled={disabled}
                 >
                     {value
                         ? options.find((option) => option.value === value)?.label

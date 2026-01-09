@@ -163,13 +163,23 @@ pub fn get_stock_movement_history(
     app: AppHandle,
     item_id: Option<i64>,
     site_id: Option<i64>,
+    voucher_type_id: Option<i64>,
     from_date: Option<String>,
     to_date: Option<String>,
     page: i64,
     limit: i64,
 ) -> Result<db::PaginatedResponse<db::StockMovementHistory>, String> {
-    db::get_stock_movement_history(&app, item_id, site_id, from_date, to_date, page, limit)
-        .map_err(|e| e.to_string())
+    db::get_stock_movement_history(
+        &app,
+        item_id,
+        site_id,
+        voucher_type_id,
+        from_date,
+        to_date,
+        page,
+        limit,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[command]

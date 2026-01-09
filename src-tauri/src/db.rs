@@ -1113,6 +1113,7 @@ pub fn get_stock_movement_history(
     app: &AppHandle,
     item_id: Option<i64>,
     site_id: Option<i64>,
+    voucher_type_id: Option<i64>,
     from_date: Option<String>,
     to_date: Option<String>,
     page: i64,
@@ -1132,6 +1133,11 @@ pub fn get_stock_movement_history(
     if let Some(sid) = site_id {
         where_clauses.push("sm.site_id = ?".to_string());
         params_vec.push(Box::new(sid));
+    }
+
+    if let Some(vtid) = voucher_type_id {
+        where_clauses.push("v.voucher_type_id = ?".to_string());
+        params_vec.push(Box::new(vtid));
     }
 
     if let Some(fd) = &from_date {
@@ -1173,6 +1179,11 @@ pub fn get_stock_movement_history(
         if let Some(sid) = site_id {
             balance_query.push_str(" AND sm.site_id = ?");
             balance_params.push(Box::new(sid));
+        }
+
+        if let Some(vtid) = voucher_type_id {
+            balance_query.push_str(" AND v.voucher_type_id = ?");
+            balance_params.push(Box::new(vtid));
         }
 
         let b_param_refs: Vec<&dyn rusqlite::ToSql> =

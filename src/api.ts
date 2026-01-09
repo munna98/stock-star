@@ -231,6 +231,7 @@ export const getSiteStockBalances = async (siteId: number): Promise<StockBalance
 export const getStockMovementHistory = async (
     itemId?: number,
     siteId?: number,
+    voucherTypeId?: number,
     fromDate?: string,
     toDate?: string,
     page: number = 1,
@@ -239,6 +240,7 @@ export const getStockMovementHistory = async (
     return await invoke("get_stock_movement_history", {
         itemId,
         siteId,
+        voucherTypeId,
         fromDate,
         toDate,
         page,

@@ -38,6 +38,7 @@ function StockEntryPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const isEditMode = searchParams.get("edit_id") != null;
+    const isViewMode = searchParams.get("view_id") != null;
     const { handleKeyDown } = useEnterKeyNavigation();
     const [focusNewRow, setFocusNewRow] = useState(false);
 
@@ -74,9 +75,12 @@ function StockEntryPage() {
 
             // Handle URL Search Params
             const editId = searchParams.get("edit_id");
-            if (editId) {
+            const viewId = searchParams.get("view_id");
+            const targetId = editId || viewId;
+
+            if (targetId) {
                 try {
-                    const voucherData = await getInventoryVoucher(Number(editId));
+                    const voucherData = await getInventoryVoucher(Number(targetId));
                     setVoucher(voucherData);
                     // Fetch stock balances for existing items
                     if (voucherData.source_site_id) {
@@ -284,6 +288,7 @@ function StockEntryPage() {
                                 value={voucher.voucher_date}
                                 onChange={(e) => setVoucher({ ...voucher, voucher_date: e.target.value })}
                                 onKeyDown={(e) => handleKeyDown(e, "#type-input")}
+                                disabled={isViewMode}
                                 className="h-8 w-full"
                             />
 
@@ -298,6 +303,7 @@ function StockEntryPage() {
                                 onChange={(val) => setVoucher({ ...voucher, voucher_type_id: Number(val) })}
                                 onKeyDown={(e) => handleKeyDown(e, showSource ? "#source-input" : (showDestination ? "#dest-input" : "#remarks-input"))}
                                 placeholder="Select type"
+                                disabled={isViewMode}
                                 className="h-8 w-full"
                             />
 
@@ -321,6 +327,7 @@ function StockEntryPage() {
                                     }}
                                     onKeyDown={(e) => handleKeyDown(e, showDestination ? "#dest-input" : "#remarks-input")}
                                     placeholder="Select Source Site"
+                                    disabled={isViewMode}
                                     className="h-8 w-full"
                                 />
 
@@ -341,6 +348,7 @@ function StockEntryPage() {
                                     onChange={(val) => setVoucher({ ...voucher, destination_site_id: Number(val) })}
                                     onKeyDown={(e) => handleKeyDown(e, "#remarks-input")}
                                     placeholder="Select Destination Site"
+                                    disabled={isViewMode}
                                     className="h-8 w-full"
                                 />
 
@@ -357,6 +365,7 @@ function StockEntryPage() {
                                 onChange={(e) => setVoucher({ ...voucher, remarks: e.target.value })}
                                 onKeyDown={(e) => handleKeyDown(e, "#item-input-0")}
                                 placeholder="Optional remarks"
+                                disabled={isViewMode}
                                 className="h-8 w-full"
                             />
 
@@ -391,8 +400,8 @@ function StockEntryPage() {
                                                 value={vi.item_id ? String(vi.item_id) : ""}
                                                 onChange={(val) => updateItemRow(index, "item_id", Number(val))}
                                                 onKeyDown={(e) => handleKeyDown(e, `#qty-input-${index}`, true)}
-
                                                 placeholder="Select Item"
+                                                disabled={isViewMode}
                                                 className="h-8"
                                             />
 
@@ -416,6 +425,7 @@ function StockEntryPage() {
                                                             }
                                                         }
                                                     }}
+                                                    disabled={isViewMode}
                                                     className="h-8 w-20"
                                                 />
 
@@ -432,6 +442,7 @@ function StockEntryPage() {
                                                 size="icon"
                                                 onClick={addItemRow}
                                                 className="h-8 w-8 text-primary hover:bg-primary/10"
+                                                disabled={isViewMode}
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>
@@ -440,7 +451,7 @@ function StockEntryPage() {
                                                 size="icon"
                                                 onClick={() => removeItemRow(index)}
                                                 className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                                disabled={voucher.items?.length === 1}
+                                                disabled={isViewMode || voucher.items?.length === 1}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -463,17 +474,26 @@ function StockEntryPage() {
                         <Clock className="h-4 w-4" /> History
                     </Button>
                     <div className="w-[1px] h-6 bg-border mx-2" />
-                    <Button variant="outline" onClick={handleClear} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <RotateCcw className="h-4 w-4" /> Clear
-                    </Button>
-                    {isEditMode && (
+                    {!isViewMode && (
+                        <>
+                            <Button variant="outline" onClick={handleClear} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                <RotateCcw className="h-4 w-4" /> Clear
+                            </Button>
+                            {isEditMode && (
+                                <Button variant="outline" onClick={() => navigate("/transactions")} className="gap-2">
+                                    <X className="h-4 w-4" /> Cancel
+                                </Button>
+                            )}
+                            <Button onClick={handleSave} className="gap-2">
+                                <Save className="h-4 w-4" /> {isEditMode ? "Update" : "Save"}
+                            </Button>
+                        </>
+                    )}
+                    {isViewMode && (
                         <Button variant="outline" onClick={() => navigate("/transactions")} className="gap-2">
-                            <X className="h-4 w-4" /> Cancel
+                            <X className="h-4 w-4" /> Close
                         </Button>
                     )}
-                    <Button onClick={handleSave} className="gap-2">
-                        <Save className="h-4 w-4" /> {isEditMode ? "Update" : "Save"}
-                    </Button>
                 </div>
             </div>
         </div>

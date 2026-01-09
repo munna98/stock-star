@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStockMovementHistory, getItems, getSites, StockMovementHistory, Item, Site } from "../api";
+import { getStockMovementHistory, getItems, getSites, getInventoryTransactionTypes, StockMovementHistory, Item, Site, InventoryTransactionType } from "../api";
 import { formatDate } from "@/lib/utils";
 import {
     Table,
@@ -21,6 +21,7 @@ function StockMovementReport() {
     const [movements, setMovements] = useState<StockMovementHistory[]>([]);
     const [items, setItems] = useState<Item[]>([]);
     const [sites, setSites] = useState<Site[]>([]);
+    const [transactionTypes, setTransactionTypes] = useState<InventoryTransactionType[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +31,7 @@ function StockMovementReport() {
     const [filters, setFilters] = useState({
         itemId: "all" as number | "all",
         siteId: "all" as number | "all",
+        voucherTypeId: "all" as number | "all",
         fromDate: "",
         toDate: "",
     });
@@ -40,12 +42,14 @@ function StockMovementReport() {
 
     const fetchMasterData = async () => {
         try {
-            const [itemsData, sitesData] = await Promise.all([
+            const [itemsData, sitesData, typesData] = await Promise.all([
                 getItems(),
                 getSites(),
+                getInventoryTransactionTypes(),
             ]);
             setItems(itemsData);
             setSites(sitesData);
+            setTransactionTypes(typesData);
         } catch (error) {
             console.error("Failed to fetch master data:", error);
         }
@@ -65,6 +69,7 @@ function StockMovementReport() {
             const data = await getStockMovementHistory(
                 filters.itemId === "all" ? undefined : filters.itemId,
                 filters.siteId === "all" ? undefined : filters.siteId,
+                filters.voucherTypeId === "all" ? undefined : filters.voucherTypeId,
                 filters.fromDate || undefined,
                 filters.toDate || undefined,
                 currentPage,
@@ -81,6 +86,7 @@ function StockMovementReport() {
         setFilters({
             itemId: "all",
             siteId: "all",
+            voucherTypeId: "all",
             fromDate: "",
             toDate: "",
         });
@@ -97,7 +103,7 @@ function StockMovementReport() {
 
             <Card>
                 <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         <div className="space-y-2">
                             <Label>Item</Label>
                             <Combobox
@@ -126,6 +132,21 @@ function StockMovementReport() {
                                 value={String(filters.siteId)}
                                 onChange={(val) => setFilters({ ...filters, siteId: val === "all" ? "all" : Number(val) })}
                                 placeholder="All Sites"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Transaction Type</Label>
+                            <Combobox
+                                options={[
+                                    { label: "All Types", value: "all" },
+                                    ...transactionTypes.map(t => ({
+                                        label: t.name,
+                                        value: String(t.id)
+                                    }))
+                                ]}
+                                value={String(filters.voucherTypeId)}
+                                onChange={(val) => setFilters({ ...filters, voucherTypeId: val === "all" ? "all" : Number(val) })}
+                                placeholder="All Types"
                             />
                         </div>
                         <div className="space-y-2">
