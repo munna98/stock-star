@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { generatePrintHTML, openPrintWindow } from "@/lib/printUtils";
 
 function StockBalanceReport() {
     const [balances, setBalances] = useState<StockBalance[]>([]);
@@ -100,7 +101,32 @@ function StockBalanceReport() {
     };
 
     const handlePrint = () => {
-        alert("Print functionality will be implemented later.");
+        const printHTML = generatePrintHTML({
+            title: 'Stock Balance Report',
+            subtitle: `As of ${new Date().toLocaleDateString()}`,
+            filters: {
+                itemName: filters.itemName || 'All Items',
+                site: filters.site !== 'all' ? filters.site : 'All Sites',
+            },
+            data: balances,
+            columns: [
+                { header: 'Item Code', accessor: 'item_code', width: '12%' },
+                { header: 'Item Name', accessor: 'item_name', width: '20%' },
+                { header: 'Brand', accessor: 'brand_name', width: '12%' },
+                { header: 'Model', accessor: 'model_name', width: '12%' },
+                { header: 'Site', accessor: 'site_name', width: '18%' },
+                {
+                    header: 'Balance',
+                    accessor: 'balance',
+                    align: 'right',
+                    format: (val) => (val ?? 0).toFixed(2),
+                    width: '12%',
+                },
+            ],
+            showFilters: true,
+            orientation: 'portrait',
+        });
+        openPrintWindow(printHTML);
     };
 
     // Derived site options from fetched master data

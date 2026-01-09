@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { X, Printer } from "lucide-react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { generatePrintHTML, openPrintWindow } from "@/lib/printUtils";
 
 function StockMovementReport() {
     const [movements, setMovements] = useState<StockMovementHistory[]>([]);
@@ -96,7 +97,40 @@ function StockMovementReport() {
     };
 
     const handlePrint = () => {
-        alert("Print functionality will be implemented later.");
+        const printHTML = generatePrintHTML({
+            title: 'Stock Movement History Report',
+            subtitle: `From ${filters.fromDate || 'Start'} to ${filters.toDate || 'End'}`,
+            filters: {
+                item: filters.itemId === 'all' ? 'All Items' :
+                    items.find(i => i.id === filters.itemId)?.name || 'N/A',
+                site: filters.siteId === 'all' ? 'All Sites' :
+                    sites.find(s => s.id === filters.siteId)?.name || 'N/A',
+                transactionType: filters.voucherTypeId === 'all' ? 'All Types' :
+                    transactionTypes.find(t => t.id === filters.voucherTypeId)?.name || 'N/A',
+            },
+            data: movements,
+            columns: [
+                { header: 'Date', accessor: 'voucher_date', format: (val) => formatDate(val), width: '10%' },
+                { header: 'V. No', accessor: 'transaction_number', width: '8%' },
+                { header: 'Type', accessor: 'voucher_type_name', width: '12%' },
+                { header: 'Item', accessor: 'item_name', width: '15%' },
+                { header: 'Brand', accessor: 'brand_name', width: '10%' },
+                { header: 'Model', accessor: 'model_name', width: '10%' },
+                { header: 'Site', accessor: 'site_name', width: '12%' },
+                { header: 'In', accessor: 'stock_in', align: 'right', format: (val) => val > 0 ? val.toFixed(2) : '-', width: '7%' },
+                { header: 'Out', accessor: 'stock_out', align: 'right', format: (val) => val > 0 ? val.toFixed(2) : '-', width: '7%' },
+                {
+                    header: 'Balance',
+                    accessor: 'running_balance',
+                    align: 'right',
+                    format: (val) => val ? val.toFixed(2) : '-',
+                    width: '9%'
+                },
+            ],
+            showFilters: true,
+            orientation: 'landscape',
+        });
+        openPrintWindow(printHTML);
     };
 
     return (
