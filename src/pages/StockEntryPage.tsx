@@ -16,6 +16,8 @@ import {
     InventoryVoucher,
     InventoryVoucherItem
 } from "../api";
+import { generateVoucherPrintHTML, openPrintWindow } from "@/lib/printUtils";
+import { formatDate } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -262,7 +264,51 @@ function StockEntryPage() {
     };
 
     const handlePrint = () => {
-        alert("Print functionality will be implemented later.");
+        if (!voucher.voucher_type_id) {
+            alert("No transaction type selected.");
+            return;
+        }
+
+        const typeName = transactionTypes.find(t => t.id === voucher.voucher_type_id)?.name || "Voucher";
+        const sourceName = sites.find(s => s.id === voucher.source_site_id)?.name;
+        const destName = sites.find(s => s.id === voucher.destination_site_id)?.name;
+
+        // Filter valid items
+        const printItems = (voucher.items || [])
+            .filter(vi => vi.item_id && vi.item_id > 0)
+            .map(vi => {
+                const item = items.find(i => i.id === vi.item_id);
+                return {
+                    item_code: item?.code || "",
+                    item_name: item?.name || "Unknown Item",
+                    brand_name: item?.brand_name,
+                    model_name: item?.model_name,
+                    quantity: vi.quantity
+                };
+            });
+
+        if (printItems.length === 0) {
+            alert("No items to print.");
+            return;
+        }
+
+        const details = [
+            { label: "Voucher No", value: voucher.transaction_number || "(New)" },
+            { label: "Date", value: formatDate(voucher.voucher_date || new Date().toISOString()) },
+            { label: "Type", value: typeName },
+            { label: "Remarks", value: voucher.remarks || "-" },
+        ];
+
+        if (sourceName) details.push({ label: "Source", value: sourceName });
+        if (destName) details.push({ label: "Destination", value: destName });
+
+        const html = generateVoucherPrintHTML({
+            title: typeName.toUpperCase(),
+            details,
+            items: printItems
+        });
+
+        openPrintWindow(html);
     };
 
     const handleViewHistory = () => {

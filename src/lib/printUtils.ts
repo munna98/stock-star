@@ -166,6 +166,177 @@ export const generatePrintHTML = (options: PrintOptions): string => {
   return html;
 };
 
+export interface VoucherPrintOptions {
+  title: string;
+  details: {
+    label: string;
+    value: string;
+  }[];
+  items: {
+    item_code: string;
+    item_name: string;
+    brand_name?: string;
+    model_name?: string;
+    quantity: number;
+    unit?: string;
+  }[];
+}
+
+export const generateVoucherPrintHTML = (options: VoucherPrintOptions): string => {
+  const { title, details, items } = options;
+
+  const detailRows = [];
+  for (let i = 0; i < details.length; i += 2) {
+    const col1 = details[i];
+    const col2 = details[i + 1];
+    detailRows.push(`
+      <tr>
+        <td class="detail-label">${col1.label}:</td>
+        <td class="detail-value">${col1.value}</td>
+        ${col2 ? `
+          <td class="detail-label">${col2.label}:</td>
+          <td class="detail-value">${col2.value}</td>
+        ` : '<td></td><td></td>'}
+      </tr>
+    `);
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${title}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          padding: 20px;
+          background: white;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        @page { size: A4 portrait; margin: 0; }
+        @media print {
+          body { padding: 15mm; }
+          .no-print { display: none; }
+        }
+
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 10px;
+        }
+        .header h1 { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+        
+        .details-table {
+          width: 100%;
+          margin-bottom: 20px;
+          border-collapse: collapse;
+        }
+        .details-table td {
+          padding: 5px;
+          border: none;
+        }
+        .detail-label {
+          font-weight: bold;
+          width: 15%;
+          color: #555;
+          font-size: 13px;
+        }
+        .detail-value {
+          width: 35%;
+          font-size: 13px;
+        }
+
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        .items-table th {
+          background: #f3f4f6;
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+          font-size: 12px;
+          font-weight: bold;
+        }
+        .items-table td {
+          border: 1px solid #ddd;
+          padding: 6px 8px;
+          font-size: 12px;
+        }
+        .items-table .text-right { text-align: right; }
+        .items-table .text-center { text-align: center; }
+
+        .footer {
+          margin-top: 40px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+        }
+        .signature-line {
+          border-top: 1px solid #333;
+          width: 200px;
+          text-align: center;
+          padding-top: 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${title}</h1>
+      </div>
+
+      <table class="details-table">
+        <tbody>
+          ${detailRows.join('')}
+        </tbody>
+      </table>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 50px">S.No</th>
+            <th>Item Details</th>
+            <th class="text-right" style="width: 100px">Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, index) => `
+            <tr>
+              <td class="text-center">${index + 1}</td>
+              <td>
+                <div style="font-weight: 500">${item.item_name}</div>
+                <div style="font-size: 11px; color: #666">
+                  ${[item.item_code, item.brand_name, item.model_name].filter(Boolean).join(' | ')}
+                </div>
+              </td>
+              <td class="text-right">${item.quantity}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div class="signature-block">
+          <div style="height: 40px"></div>
+          <div class="signature-line">Authorized Signatory</div>
+        </div>
+        <div class="signature-block">
+          <div style="height: 40px"></div>
+          <div class="signature-line">Receiver's Signature</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return html;
+};
+
 export const openPrintWindow = (html: string) => {
   // Create a hidden iframe
   const iframe = document.createElement('iframe');
