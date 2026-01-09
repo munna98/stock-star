@@ -9,7 +9,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Combobox } from "@/components/ui/combobox";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Printer } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -97,6 +99,10 @@ function StockBalanceReport() {
         setCurrentPage(1);
     };
 
+    const handlePrint = () => {
+        alert("Print functionality will be implemented later.");
+    };
+
     // Derived site options from fetched master data
     // Previously it was derived from loaded balances. Now we use all available sites.
 
@@ -114,6 +120,9 @@ function StockBalanceReport() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Stock Balance Report</h2>
+                <Button variant="outline" onClick={handlePrint} className="gap-2">
+                    <Printer className="h-4 w-4" /> Print
+                </Button>
             </div>
 
             <Card>

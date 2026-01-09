@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-import { X } from "lucide-react";
+import { X, Printer } from "lucide-react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
 function StockMovementReport() {
@@ -95,10 +95,17 @@ function StockMovementReport() {
         setTotalCount(0);
     };
 
+    const handlePrint = () => {
+        alert("Print functionality will be implemented later.");
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Stock Movement History</h2>
+                <Button variant="outline" onClick={handlePrint} className="gap-2">
+                    <Printer className="h-4 w-4" /> Print
+                </Button>
             </div>
 
             <Card>
