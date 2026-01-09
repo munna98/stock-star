@@ -384,7 +384,10 @@ function StockEntryPage() {
                                                 id={`item-input-${index}`}
                                                 options={items
                                                     .filter(item => item.is_active || item.id === vi.item_id)
-                                                    .map(item => ({ label: `${item.name} (${item.code})`, value: String(item.id) }))}
+                                                    .map(item => ({
+                                                        label: `${item.name}${item.brand_name ? ` - ${item.brand_name}` : ""}${item.model_name ? ` - ${item.model_name}` : ""} (${item.code})`,
+                                                        value: String(item.id)
+                                                    }))}
                                                 value={vi.item_id ? String(vi.item_id) : ""}
                                                 onChange={(val) => updateItemRow(index, "item_id", Number(val))}
                                                 onKeyDown={(e) => handleKeyDown(e, `#qty-input-${index}`, true)}

@@ -123,7 +123,7 @@ function StockBalanceReport() {
                             options={itemOptions}
                             value={filters.itemName}
                             onChange={(val) => handleFilterChange("itemName", val)}
-                            placeholder="Filter by item name..."
+                            placeholder="Filter by item name"
                             className="flex-1"
                         />
                         <Select value={filters.site} onValueChange={(value) => handleFilterChange("site", value)}>

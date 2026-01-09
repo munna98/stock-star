@@ -160,9 +160,11 @@ function StockMovementReport() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Voucher No</TableHead>
+                                <TableHead>V No</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Item</TableHead>
+                                <TableHead>Brand</TableHead>
+                                <TableHead>Model</TableHead>
                                 <TableHead>Site</TableHead>
                                 <TableHead>Remarks</TableHead>
                                 <TableHead className="text-right">In</TableHead>
@@ -177,8 +179,10 @@ function StockMovementReport() {
                                     <TableCell className="font-medium">{movement.transaction_number}</TableCell>
                                     <TableCell>{movement.voucher_type_name}</TableCell>
                                     <TableCell>{movement.item_name}</TableCell>
+                                    <TableCell>{movement.brand_name || "N/A"}</TableCell>
+                                    <TableCell>{movement.model_name || "N/A"}</TableCell>
                                     <TableCell>{movement.site_name}</TableCell>
-                                    <TableCell className="max-w-[200px] truncate" title={movement.remarks || ""}>
+                                    <TableCell className="max-w-[100px] truncate" title={movement.remarks || ""}>
                                         {movement.remarks || "-"}
                                     </TableCell>
                                     <TableCell className="text-right text-green-600 font-medium">
@@ -194,7 +198,7 @@ function StockMovementReport() {
                             ))}
                             {movements.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
                                         {(filters.itemId !== "all" || filters.siteId !== "all" || filters.fromDate || filters.toDate)
                                             ? "No movements found for the selected criteria."
                                             : "Select filters to view stock movements."}

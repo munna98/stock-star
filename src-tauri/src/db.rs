@@ -25,6 +25,8 @@ pub struct Item {
     pub name: String,
     pub brand_id: Option<i64>,
     pub model_id: Option<i64>,
+    pub brand_name: Option<String>,
+    pub model_name: Option<String>,
     pub is_active: bool,
 }
 
@@ -123,6 +125,8 @@ pub struct StockMovementHistory {
     pub item_id: i64,
     pub item_code: String,
     pub item_name: String,
+    pub brand_name: Option<String>,
+    pub model_name: Option<String>,
     pub site_id: i64,
     pub site_code: String,
     pub site_name: String,
@@ -414,8 +418,15 @@ pub fn create_item(app: &AppHandle, item: Item) -> Result<i64> {
 
 pub fn get_all_items(app: &AppHandle) -> Result<Vec<Item>> {
     let conn = get_db_conn(app)?;
-    let mut stmt =
-        conn.prepare("SELECT id, code, name, brand_id, model_id, is_active FROM items")?;
+    let mut stmt = conn.prepare(
+        "SELECT 
+            i.id, i.code, i.name, i.brand_id, i.model_id, i.is_active,
+            b.name as brand_name,
+            m.name as model_name
+         FROM items i
+         LEFT JOIN brands b ON i.brand_id = b.id
+         LEFT JOIN models m ON i.model_id = m.id",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(Item {
             id: Some(row.get(0)?),
@@ -423,7 +434,9 @@ pub fn get_all_items(app: &AppHandle) -> Result<Vec<Item>> {
             name: row.get(2)?,
             brand_id: row.get(3)?,
             model_id: row.get(4)?,
-            is_active: row.get(5).unwrap_or(true), // Handle legacy data
+            is_active: row.get(5).unwrap_or(true),
+            brand_name: row.get(6)?,
+            model_name: row.get(7)?,
         })
     })?;
     rows.collect()
@@ -567,7 +580,7 @@ pub fn create_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) 
         match type_name.as_str() {
             "Godown → Site" | "Site → Godown" | "Site → Site" => {
                 if let (Some(src), Some(dest)) = (src_name, dest_name) {
-                    generated_remark = format!("Transfer: {} -> {}", src, dest);
+                    generated_remark = format!("{} -> {}", src, dest);
                 }
             }
             "Purchase Inward" => {
@@ -859,7 +872,7 @@ pub fn update_inventory_voucher(app: &AppHandle, mut voucher: InventoryVoucher) 
         match type_name.as_str() {
             "Godown → Site" | "Site → Godown" | "Site → Site" => {
                 if let (Some(src), Some(dest)) = (src_name, dest_name) {
-                    generated_remark = format!("Transfer: {} -> {}", src, dest);
+                    generated_remark = format!("{} -> {}", src, dest);
                 }
             }
             _ => {}
@@ -1214,6 +1227,8 @@ pub fn get_stock_movement_history(
             sm.item_id,
             i.code as item_code,
             i.name as item_name,
+            b.name as brand_name,
+            m.name as model_name,
             sm.site_id,
             s.code as site_code,
             s.name as site_name,
@@ -1225,6 +1240,8 @@ pub fn get_stock_movement_history(
          JOIN inventory_vouchers v ON sm.voucher_id = v.id
          JOIN inventory_transaction_types t ON v.voucher_type_id = t.id
          JOIN items i ON sm.item_id = i.id
+         LEFT JOIN brands b ON i.brand_id = b.id
+         LEFT JOIN models m ON i.model_id = m.id
          JOIN sites s ON sm.site_id = s.id
          WHERE {}
          ORDER BY v.voucher_date ASC, sm.created_at ASC
@@ -1249,14 +1266,16 @@ pub fn get_stock_movement_history(
                 item_id: row.get(5)?,
                 item_code: row.get(6)?,
                 item_name: row.get(7)?,
-                site_id: row.get(8)?,
-                site_code: row.get(9)?,
-                site_name: row.get(10)?,
-                stock_in: row.get(11)?,
-                stock_out: row.get(12)?,
-                remarks: row.get(13)?,
+                brand_name: row.get(8)?,
+                model_name: row.get(9)?,
+                site_id: row.get(10)?,
+                site_code: row.get(11)?,
+                site_name: row.get(12)?,
+                stock_in: row.get(13)?,
+                stock_out: row.get(14)?,
+                remarks: row.get(15)?,
                 running_balance: 0.0, // Will calculate below
-                created_at: row.get(14)?,
+                created_at: row.get(16)?,
             })
         })?
         .collect::<Result<Vec<_>>>()?;

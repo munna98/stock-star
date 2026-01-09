@@ -16,6 +16,8 @@ export interface Item {
     name: string;
     brand_id?: number;
     model_id?: number;
+    brand_name?: string;
+    model_name?: string;
     is_active: boolean;
 }
 
@@ -89,6 +91,8 @@ export interface StockMovementHistory {
     item_id: number;
     item_code: string;
     item_name: string;
+    brand_name?: string;
+    model_name?: string;
     site_id: number;
     site_code: string;
     site_name: string;
