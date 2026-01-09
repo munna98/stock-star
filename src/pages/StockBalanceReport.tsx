@@ -137,7 +137,7 @@ function StockBalanceReport() {
     const itemOptions = [
         { label: "All Items", value: "" }, // Empty string for all
         ...items.map(i => ({
-            label: i.name,
+            label: `${i.name}${i.brand_name ? ` - ${i.brand_name}` : ""}${i.model_name ? ` - ${i.model_name}` : ""} (${i.code})`,
             value: i.name
         }))
     ];

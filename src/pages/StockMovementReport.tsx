@@ -151,7 +151,7 @@ function StockMovementReport() {
                                 options={[
                                     { label: "All Items", value: "all" },
                                     ...items.map(i => ({
-                                        label: `${i.name} (${i.code})`,
+                                        label: `${i.name}${i.brand_name ? ` - ${i.brand_name}` : ""}${i.model_name ? ` - ${i.model_name}` : ""} (${i.code})`,
                                         value: String(i.id)
                                     }))
                                 ]}

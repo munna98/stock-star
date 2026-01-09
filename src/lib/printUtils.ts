@@ -68,8 +68,8 @@ export const generatePrintHTML = (options: PrintOptions): string => {
           print-color-adjust: exact;
         }
         @page { 
-          size: ${orientation === 'landscape' ? 'A4 landscape' : 'A4 portrait'};
-          margin: 0;
+          size: ${orientation === 'landscape' ? 'landscape' : 'portrait'};
+          margin: 0mm !important;
         }
         @media print {
           body { padding: 15mm; }
@@ -148,17 +148,10 @@ export const generatePrintHTML = (options: PrintOptions): string => {
       <div class="print-header">
         <h1>${title}</h1>
         ${subtitle ? `<p>${subtitle}</p>` : ''}
-        <div class="print-timestamp">
-          Printed on ${new Date().toLocaleString()}
-        </div>
       </div>
 
       ${filterHTML}
       ${tableHTML}
-
-      <div class="print-footer">
-        <p>This is a system-generated report. For official use only.</p>
-      </div>
     </body>
     </html>
   `;
@@ -216,7 +209,7 @@ export const generateVoucherPrintHTML = (options: VoucherPrintOptions): string =
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        @page { size: A4 portrait; margin: 0; }
+        @page { size: A4 portrait; margin: 0mm !important; }
         @media print {
           body { padding: 15mm; }
           .no-print { display: none; }
