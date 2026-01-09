@@ -156,7 +156,7 @@ pub struct ImportItem {
 // Database Connection
 // ============================================================================
 
-fn get_db_conn(app: &AppHandle) -> Result<Connection> {
+pub fn get_db_conn(app: &AppHandle) -> Result<Connection> {
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -302,6 +302,14 @@ fn create_tables(conn: &Connection) -> Result<()> {
             FOREIGN KEY(voucher_item_id) REFERENCES inventory_voucher_items(id),
             FOREIGN KEY(item_id) REFERENCES items(id),
             FOREIGN KEY(site_id) REFERENCES sites(id)
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS system_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
         )",
         [],
     )?;

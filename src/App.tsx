@@ -9,12 +9,20 @@ import TransactionHistoryPage from "./pages/TransactionHistoryPage";
 import StockBalanceReport from "./pages/StockBalanceReport";
 import DashboardPage from "./pages/DashboardPage";
 import StockMovementReport from "./pages/StockMovementReport";
+import ActivationPage from "./pages/ActivationPage";
+import RequireActivation from "./components/RequireActivation";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/activation" element={<ActivationPage />} />
+
+        <Route path="/" element={
+          <RequireActivation>
+            <Layout />
+          </RequireActivation>
+        }>
           <Route index element={<DashboardPage />} />
           <Route path="items" element={<ItemsPage />} />
           <Route path="brands" element={<BrandsPage />} />

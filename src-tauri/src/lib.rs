@@ -4,6 +4,7 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+mod activation;
 mod commands;
 mod db;
 
@@ -45,7 +46,10 @@ pub fn run() {
             commands::get_site_stock_balances,
             commands::get_stock_movement_history,
             commands::get_dashboard_stats,
-            commands::import_items
+            commands::import_items,
+            activation::get_license_status,
+            activation::activate_license,
+            activation::get_system_id
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

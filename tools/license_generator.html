@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Star - License Generator (Symmetric)</title>
+    <style>
+        body {
+            font-family: ui-monospace, monospace;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f0f0f0;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-family: monospace;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Stock Star License Generator</h1>
+
+    <div class="card">
+        <h2>1. Secret Key Configuration</h2>
+        <div class="warning">
+            <strong>CONFIGURATION:</strong> The secret key must match the app's `SHARED_SECRET`.<br>
+            Default: <code>public-key-stock-star-2026</code>
+        </div>
+
+        <label>Shared Secret Key</label>
+        <input type="text" id="secretKey" value="public-key-stock-star-2026">
+    </div>
+
+    <div class="card">
+        <h2>2. Generate License</h2>
+        <label>Issued To (Name/Email) - Optional</label>
+        <input type="text" id="issuedTo" placeholder="John Doe">
+
+        <label>System ID (Machine Lock) - REQUIRED</label>
+        <input type="text" id="systemId" placeholder="Paste user's System ID here...">
+
+        <label>License Type</label>
+        <select id="licenseType">
+            <option value="basic">Basic</option>
+            <option value="premium">Premium</option>
+        </select>
+
+        <label>Duration</label>
+        <select id="duration" onchange="toggleCustomDuration()">
+            <option value="1">1 Day (Testing)</option>
+            <option value="30">30 Days</option>
+            <option value="365">1 Year</option>
+            <option value="lifetime">Lifetime</option>
+            <option value="custom">Custom Days...</option>
+        </select>
+        <input type="number" id="customDays" style="display:none;" placeholder="Enter days...">
+
+        <button onclick="generateLicense()">Generate License Key</button>
+
+        <label>Generated License Key (Send to User)</label>
+        <textarea id="licenseOutput" readonly onclick="this.select()"></textarea>
+    </div>
+
+    <script>
+        function toggleCustomDuration() {
+            const val = document.getElementById('duration').value;
+            document.getElementById('customDays').style.display = val === 'custom' ? 'block' : 'none';
+        }
+
+        async function generateLicense() {
+            const secretKeyStr = document.getElementById('secretKey').value;
+            if (!secretKeyStr) {
+                alert("Secret Key is required.");
+                return;
+            }
+
+            const systemId = document.getElementById('systemId').value.trim();
+            if (!systemId) {
+                alert("System ID is required for machine-locked licenses.");
+                return;
+            }
+
+            let days;
+            const durationVal = document.getElementById('duration').value;
+            if (durationVal === 'lifetime') {
+                days = null;
+            } else if (durationVal === 'custom') {
+                days = parseInt(document.getElementById('customDays').value) || 30;
+            } else {
+                days = parseInt(durationVal);
+            }
+
+            const issuedTo = document.getElementById('issuedTo').value.trim();
+            const type = document.getElementById('licenseType').value;
+            const iat = Math.floor(Date.now() / 1000);
+
+            let exp = null;
+            if (days !== null) {
+                exp = iat + (days * 24 * 60 * 60);
+            }
+
+            const payload = {
+                sub: "license",
+                type: type,
+                iat: iat,
+                exp: exp,
+                name: issuedTo || null,
+                system_id: systemId
+            };
+
+            const payloadJson = JSON.stringify(payload);
+            const enc = new TextEncoder();
+            const payloadBytes = enc.encode(payloadJson);
+
+            try {
+                // Import Secret Key
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    "raw",
+                    enc.encode(secretKeyStr),
+                    { name: "HMAC", hash: "SHA-256" },
+                    false,
+                    ["sign"]
+                );
+
+                // Sign
+                const signatureBuffer = await window.crypto.subtle.sign(
+                    "HMAC",
+                    keyMaterial,
+                    payloadBytes
+                );
+                const signatureBytes = new Uint8Array(signatureBuffer);
+
+                // Concatenate Signature + Payload
+                const combined = new Uint8Array(signatureBytes.length + payloadBytes.length);
+                combined.set(signatureBytes);
+                combined.set(payloadBytes, signatureBytes.length);
+
+                // Base64 Encode
+                const licenseKey = btoa(String.fromCharCode(...combined));
+                document.getElementById('licenseOutput').value = licenseKey;
+            } catch (e) {
+                alert("Error generating license: " + e.message);
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+
+</html>
